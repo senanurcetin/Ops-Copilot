@@ -24,11 +24,11 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
       )}
       <div
         className={cn(
-          'max-w-[75%] rounded-lg p-3 text-sm shadow-md',
+          'max-w-[75%] rounded-xl p-3 text-sm shadow-sm',
           isUser
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-card text-card-foreground',
-          isLoading && 'p-0 bg-transparent shadow-none'
+            ? 'bg-primary text-primary-foreground rounded-br-none'
+            : 'bg-card text-card-foreground rounded-bl-none border',
+          isLoading && 'p-0 bg-transparent shadow-none border-none'
         )}
       >
         {isLoading ? (
@@ -42,7 +42,7 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
       </div>
       {isUser && (
         <Avatar className="w-8 h-8">
-          <AvatarFallback className="bg-accent text-accent-foreground">
+          <AvatarFallback className="bg-secondary text-secondary-foreground">
             <User className="w-4 h-4" />
           </AvatarFallback>
         </Avatar>

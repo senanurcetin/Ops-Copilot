@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import type { ChatMessage as ChatMessageType } from '@/lib/types';
 import { handleUserMessage, handleUploadManual } from '@/app/actions';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Upload, Play } from 'lucide-react';
 import { ChatMessage } from './chat-message';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from './ui/textarea';
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
@@ -62,14 +62,14 @@ export function ChatInterface() {
   };
 
   const handleSimulate = async () => {
-    const simulatedQuestion = "What does error code 16#8090 on a PLC 1200 mean?";
+    const simulatedQuestion = "What are the troubleshooting steps for error 16#8090 on an S7-1200?";
     await sendMessage(simulatedQuestion);
   };
 
   const handleUpload = async () => {
     setIsUploading(true);
     toast({
-      title: 'Uploading...',
+      title: 'Ingesting...',
       description: 'Ingesting knowledge base. This may take a moment.',
     });
     try {
@@ -104,13 +104,13 @@ export function ChatInterface() {
   return (
     <div className="flex-1 flex flex-col h-full w-full max-w-4xl mx-auto py-6 px-4">
       <div className="flex items-center justify-end mb-4 gap-2">
-        <Button onClick={handleSimulate} disabled={isUploading || isPending}>
+        <Button variant="outline" onClick={handleSimulate} disabled={isUploading || isPending}>
           <Play className="mr-2 h-4 w-4" />
-          Run Simulation
+          Simulate Question
         </Button>
-        <Button onClick={handleUpload} disabled={isUploading || isPending}>
+        <Button variant="outline" onClick={handleUpload} disabled={isUploading || isPending}>
           <Upload className="mr-2 h-4 w-4" />
-          {isUploading ? 'Uploading...' : 'Upload Manual'}
+          {isUploading ? 'Ingesting...' : 'Ingest Knowledge Base'}
         </Button>
       </div>
       <div className="flex-1 bg-card border rounded-lg shadow-sm flex flex-col overflow-hidden">
@@ -121,16 +121,23 @@ export function ChatInterface() {
             ))}
           </div>
         </ScrollArea>
-        <div className="p-4 bg-background/80 backdrop-blur-sm border-t">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Input
+        <div className="p-4 bg-card border-t">
+          <form onSubmit={handleSubmit} className="relative">
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as any);
+                }
+              }}
               placeholder="Ask a question about your operations..."
               disabled={isPending || isUploading}
-              className="text-base"
+              className="text-base pr-16 min-h-[40px]"
+              rows={1}
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || isPending || isUploading}>
+            <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" disabled={!input.trim() || isPending || isUploading}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>

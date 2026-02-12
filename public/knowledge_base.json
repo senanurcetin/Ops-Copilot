@@ -1,52 +1,37 @@
 [
   {
-    "id": "PLC1200-HW-001",
-    "title": "PLC 1200 Hardware Error: Power Supply Failure",
-    "content": "Error Code: 16#8090. This indicates a failure in the 24V DC power supply. Check the power supply unit, wiring, and connections. Ensure the input voltage is within the specified range."
+    "id": "plc1200_overview",
+    "title": "Siemens SIMATIC S7-1200 Overview",
+    "content": "The SIMATIC S7-1200 controller is designed for discrete and continuous control tasks in the low to medium performance range. It is a compact, modular, and highly versatile PLC. Key features include integrated PROFINET interface, powerful technology functions for counting, measuring, and motion control, and seamless integration with HMI Basic Panels and the TIA Portal engineering framework."
   },
   {
-    "id": "PLC1200-HW-002",
-    "title": "PLC 1200 Hardware Error: I/O Module Not Detected",
-    "content": "Error Code: 16#80C3. The CPU cannot establish communication with a configured I/O module. Verify the module is correctly seated in the rack and powered on. Check for bent pins or damage to the backplane connector."
+    "id": "plc1500_overview",
+    "title": "Siemens SIMATIC S7-1500 Overview",
+    "content": "The SIMATIC S7-1500 controller is the benchmark for performance, efficiency, and usability in the medium to high-end machine and plant automation. It offers maximum performance with a fast backplane bus, PROFINET interface, and short reaction times. The S7-1500 is fully integrated into the TIA Portal for unified engineering and features advanced system diagnostics, security integrated by default, and a technology CPU variant for complex motion control tasks."
   },
   {
-    "id": "PLC1200-SW-001",
-    "title": "PLC 1200 Software Error: User Program Checksum Error",
-    "content": "Error Code: 16#D006. The checksum of the user program in the memory does not match the expected value, indicating corruption. Reload the program from your project file."
+    "id": "plc1200_err_16_8090",
+    "title": "S7-1200 Error: 16#8090 - I/O access error, reading",
+    "content": "Error code 16#8090 on a SIMATIC S7-1200 indicates an I/O access error during a read operation. This often means the PLC is trying to read data from a module that is not available, not configured correctly, or has failed. \n\nCommon Causes:\n1. The I/O module is physically disconnected or has lost power.\n2. The module's address in the hardware configuration (HWCN) does not match the physical setup.\n3. The module itself is defective.\n4. Incorrect wiring to the module.\n\nTroubleshooting Steps:\n1. Check the physical connection and power supply of the affected I/O module.\n2. Verify in TIA Portal that the hardware configuration matches the actual installed modules and their addresses.\n3. Check the diagnostic buffer of the CPU for more specific information about which module is failing.\n4. Inspect the wiring for any loose connections or damage.\n5. If possible, swap the module with a known working one to rule out a hardware defect."
   },
   {
-    "id": "PLC1200-SW-002",
-    "title": "PLC 1200 Software Error: Cycle Time Exceeded",
-    "content": "Error Code: 16#D080. The program's execution time exceeds the configured maximum cycle time. Optimize complex loops, use timed interrupts for long tasks, or increase the configured cycle time."
+    "id": "plc1200_err_16_80C8",
+    "title": "S7-1200 Error: 16#80C8 - Module configuration/parameter assignment error",
+    "content": "Error code 16#80C8 indicates a problem with the configuration or parameterization of a module. This means there's a mismatch between the parameters set in the TIA Portal project and what the module supports or expects.\n\nCommon Causes:\n1. An incorrect module type is configured in the hardware configuration.\n2. Incompatible firmware version between the project and the physical module.\n3. Parameter settings for a channel (e.g., input type, range) are invalid for the specific module.\n\nTroubleshooting Steps:\n1. Ensure the module part number in your TIA Portal project exactly matches the physical module.\n2. Check for firmware compatibility. You may need to update the module's firmware or adjust the project settings.\n3. Review all parameter assignments for the module in the device view and ensure they are valid.\n4. Download the hardware configuration to the PLC again after making corrections."
   },
   {
-    "id": "PLC1500-HW-001",
-    "title": "PLC 1500 Hardware Error: Memory Card Failure",
-    "content": "Error Code: 16#808B. The CPU cannot read from or write to the SIMATIC memory card. The card may be faulty, write-protected, or formatted incorrectly. Try re-inserting the card or using a new one."
+    "id": "plc1500_err_16_02_4004",
+    "title": "S7-1500 Error: 16#02:4004 - Rack failure",
+    "content": "Error 16#02:4004 on a SIMATIC S7-1500 indicates a rack or station failure. This is a serious error suggesting a problem with the backplane bus or a central module.\n\nCommon Causes:\n1. A module on the backplane has failed catastrophically.\n2. The backplane bus connector itself is damaged or disconnected.\n3. Power supply issue affecting the entire rack.\n4. A CPU or interface module failure.\n\nTroubleshooting Steps:\n1. Check the power supply for the rack. Ensure it's stable and within specifications.\n2. Visually inspect all modules on the rack. Look for any modules with red fault LEDs.\n3. Systematically remove modules from the rack (with power off) to see if the fault clears. Start with peripheral modules and work your way in.\n4. Check the diagnostic buffer for messages that occurred just before the rack failure, which might point to the initial cause.\n5. If an ET 200SP remote I/O station is involved, check the head station and network connections."
   },
   {
-    "id": "PLC1500-HW-002",
-    "title": "PLC 1500 Hardware Error: PROFINET Interface Error",
-    "content": "Error Code: 16#8101. An error occurred on the PROFINET interface. Check network cables, switch configurations, and ensure the device names are unique and correctly configured in the TIA Portal project."
+    "id": "plc1500_err_16_0D_4302",
+    "title": "S7-1500 Error: 16#0D:4302 - Time synchronization failure",
+    "content": "Error 16#0D:4302 points to a failure in the time-of-day synchronization. The PLC failed to synchronize its clock with a configured time master.\n\nCommon Causes:\n1. The NTP server is unreachable due to network issues (firewall, incorrect IP).\n2. The PLC is configured as a time slave, but no time master is active on the network.\n3. Incorrect time settings in the CPU properties (time zone, daylight saving).\n\nTroubleshooting Steps:\n1. Verify network connectivity between the PLC and the NTP server. Use ping or other network tools.\n2. Check the CPU's PROFINET interface settings and ensure it's on the correct network.\n3. In the CPU properties under 'Time of day', verify the synchronization mechanism and NTP server address are correct.\n4. Ensure that if you're using SINUMERIK as a time master, it is configured and running correctly."
   },
   {
-    "id": "PLC1500-SW-001",
-    "title": "PLC 1500 Software Error: Memory Overflow",
-    "content": "Error Code: 16#D081. The user program or data is too large for the available load or work memory. Optimize the code, reduce the size of data blocks, or use a CPU with larger memory capacity."
-  },
-  {
-    "id": "PLC1500-SW-002",
-    "title": "PLC 1500 Software Error: Inconsistent Data Block",
-    "content": "Error Code: 16#D0A3. The structure of a data block in the online project is different from the offline version. This can happen after modifying a DB and downloading only the changes. Re-download the entire block."
-  },
-  {
-    "id": "PLC-GENERAL-001",
-    "title": "General: Short Circuit Detected",
-    "content": "Error Code: 16#80A0. The PLC has detected a short circuit on one of its digital output channels. Identify the faulty output channel and inspect the connected actuator, wiring, and terminals for short circuits."
-  },
-  {
-    "id": "PLC-GENERAL-002",
-    "title": "General: System Time Not Synchronized",
-    "content": "Error Code: 16#D207. The PLC's internal clock is not synchronized with an NTP server or the master controller. Check NTP settings and network connectivity."
+    "id": "tia_portal_info",
+    "title": "TIA Portal (Totally Integrated Automation Portal)",
+    "content": "TIA Portal is an engineering framework for implementing automation solutions with Siemens hardware. It provides a unified software environment for controller programming, HMI visualization, and network configuration. Its key benefit is the integration of all necessary tools into one platform, which simplifies development, commissioning, and diagnostics."
   }
 ]
