@@ -13,6 +13,10 @@ This is a Next.js application that serves as an AI-powered assistant for industr
   - **Interactive Checklists:** Converts numbered steps in documents into actionable checklists for operators to track their progress.
   - **Progress Logging:** Allows operators to log completed checklist steps for maintenance records.
 
+## Screenshot
+
+![Ops-Copilot Application Screenshot](https://storage.googleapis.com/studiopublic/Copilot-Screenshot.png)
+
 ## Technical Stack
 
 - **Framework:** [Next.js](https://nextjs.org/) (App Router)
@@ -58,7 +62,7 @@ This project requires a Firebase project with Firestore and Google Authenticatio
 5.  **Add Authorized Domain:**
     -   While still in Authentication settings, go to the **Settings** tab.
     -   Under **Authorized domains**, click **Add domain**.
-    -   Add `localhost`. When you deploy your app, you will also need to add your production domain here.
+    -   Add `localhost`. When you deploy your app, you will also need to add your production domain and any development domains (like those from cloud workstations) here.
 
 ### 4. Configure Environment Variables
 
