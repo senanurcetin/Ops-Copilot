@@ -45,12 +45,12 @@ export default function Home() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [selectedSource, setSelectedSource] = useState<DocumentType | null>(null);
   const [selectedKeyQuote, setSelectedKeyQuote] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const { toast } = useToast();
 
   const messagesQuery = useMemo(() => {
     if (!user || !firestore) return null;
@@ -68,20 +68,6 @@ export default function Home() {
     return formattedMessages.length > 0 ? formattedMessages : [initialMessage];
   }, [messagesData, messagesLoading]);
 
-
-  useEffect(() => {
-    if (!userLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, userLoading, router]);
-
-  if (userLoading || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin" />
-      </div>
-    );
-  }
 
   const handleSelectSource = useCallback((source: DocumentType, keyQuote?: string) => {
     setSelectedSource(source);
@@ -167,6 +153,20 @@ export default function Home() {
       description: "The message has been removed from the session.",
     });
   }, [user, firestore, toast]);
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, userLoading, router]);
+
+  if (userLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider defaultOpen>
