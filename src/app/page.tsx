@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -210,7 +211,7 @@ export default function Home() {
                               isLoading={messagesLoading}
                              />
                         </div>
-                        <ContextInspector isOpen={inspectorOpen} setIsOpen={setIsOpen} source={selectedSource} keyQuote={selectedKeyQuote} />
+                        <ContextInspector isOpen={inspectorOpen} setIsOpen={setInspectorOpen} source={selectedSource} keyQuote={selectedKeyQuote} />
                     </main>
                 </div>
             </SidebarInset>
