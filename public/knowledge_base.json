@@ -1,0 +1,17 @@
+[
+  {
+    "id": "doc1",
+    "title": "Safety Protocol for Machine Handling",
+    "content": "All operators must wear personal protective equipment (PPE), including safety glasses, gloves, and steel-toed boots, when operating heavy machinery. Before starting any machine, perform a pre-operational check to ensure all safety guards are in place and the machine is in good working order. In case of a malfunction, immediately press the emergency stop button and report the issue to your supervisor. Do not attempt to repair machinery unless you are a qualified technician."
+  },
+  {
+    "id": "doc2",
+    "title": "Quality Control Checklist",
+    "content": "The quality control process involves several key checkpoints. First, inspect raw materials for any defects upon arrival. Second, monitor the production line at regular intervals to ensure specifications are being met. Third, perform a final inspection of the finished product before packaging. Any item that does not meet the quality standards must be flagged and set aside for review by the QC manager. All inspections must be logged in the quality control system."
+  },
+  {
+    "id": "doc3",
+    "title": "Emergency Evacuation Procedure",
+    "content": "In the event of a fire alarm or other emergency requiring evacuation, remain calm and proceed to the nearest emergency exit. Do not use elevators. Follow the designated evacuation routes posted throughout the facility. Once outside, gather at the designated assembly point in the main parking lot. Do not re-enter the building until an 'all clear' is given by emergency personnel or a designated safety officer."
+  }
+]
