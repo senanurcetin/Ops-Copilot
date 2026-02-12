@@ -1,17 +1,52 @@
 [
   {
-    "id": "doc1",
-    "title": "Onboarding New Employees",
-    "content": "The onboarding process for new employees consists of three main phases. Phase 1: Pre-arrival paperwork and system setup. Phase 2: First-day orientation, which includes a company overview, a tour of the office, and introductions to the team. Phase 3: A 90-day integration plan with regular check-ins."
+    "id": "PLC1200-HW-001",
+    "title": "PLC 1200 Hardware Error: Power Supply Failure",
+    "content": "Error Code: 16#8090. This indicates a failure in the 24V DC power supply. Check the power supply unit, wiring, and connections. Ensure the input voltage is within the specified range."
   },
   {
-    "id": "doc2",
-    "title": "Expense Reporting Policy",
-    "content": "All expenses must be submitted through the company's expense portal within 30 days of the purchase. A valid receipt is required for all expenses over $25. For travel expenses, pre-approval is required for flights and accommodations. Mileage for personal car usage is reimbursed at the standard federal rate."
+    "id": "PLC1200-HW-002",
+    "title": "PLC 1200 Hardware Error: I/O Module Not Detected",
+    "content": "Error Code: 16#80C3. The CPU cannot establish communication with a configured I/O module. Verify the module is correctly seated in the rack and powered on. Check for bent pins or damage to the backplane connector."
   },
   {
-    "id": "doc3",
-    "title": "IT Support Requests",
-    "content": "For IT support, please submit a ticket through the IT helpdesk portal. For urgent issues, you can call the IT hotline at x5555. The IT department aims to respond to all tickets within 4 business hours. Please provide as much detail as possible in your request, including screenshots if applicable."
+    "id": "PLC1200-SW-001",
+    "title": "PLC 1200 Software Error: User Program Checksum Error",
+    "content": "Error Code: 16#D006. The checksum of the user program in the memory does not match the expected value, indicating corruption. Reload the program from your project file."
+  },
+  {
+    "id": "PLC1200-SW-002",
+    "title": "PLC 1200 Software Error: Cycle Time Exceeded",
+    "content": "Error Code: 16#D080. The program's execution time exceeds the configured maximum cycle time. Optimize complex loops, use timed interrupts for long tasks, or increase the configured cycle time."
+  },
+  {
+    "id": "PLC1500-HW-001",
+    "title": "PLC 1500 Hardware Error: Memory Card Failure",
+    "content": "Error Code: 16#808B. The CPU cannot read from or write to the SIMATIC memory card. The card may be faulty, write-protected, or formatted incorrectly. Try re-inserting the card or using a new one."
+  },
+  {
+    "id": "PLC1500-HW-002",
+    "title": "PLC 1500 Hardware Error: PROFINET Interface Error",
+    "content": "Error Code: 16#8101. An error occurred on the PROFINET interface. Check network cables, switch configurations, and ensure the device names are unique and correctly configured in the TIA Portal project."
+  },
+  {
+    "id": "PLC1500-SW-001",
+    "title": "PLC 1500 Software Error: Memory Overflow",
+    "content": "Error Code: 16#D081. The user program or data is too large for the available load or work memory. Optimize the code, reduce the size of data blocks, or use a CPU with larger memory capacity."
+  },
+  {
+    "id": "PLC1500-SW-002",
+    "title": "PLC 1500 Software Error: Inconsistent Data Block",
+    "content": "Error Code: 16#D0A3. The structure of a data block in the online project is different from the offline version. This can happen after modifying a DB and downloading only the changes. Re-download the entire block."
+  },
+  {
+    "id": "PLC-GENERAL-001",
+    "title": "General: Short Circuit Detected",
+    "content": "Error Code: 16#80A0. The PLC has detected a short circuit on one of its digital output channels. Identify the faulty output channel and inspect the connected actuator, wiring, and terminals for short circuits."
+  },
+  {
+    "id": "PLC-GENERAL-002",
+    "title": "General: System Time Not Synchronized",
+    "content": "Error Code: 16#D207. The PLC's internal clock is not synchronized with an NTP server or the master controller. Check NTP settings and network connectivity."
   }
 ]

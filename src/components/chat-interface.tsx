@@ -6,7 +6,7 @@ import { handleUserMessage, handleUploadManual } from '@/app/actions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Upload } from 'lucide-react';
+import { Send, Upload, Play } from 'lucide-react';
 import { ChatMessage } from './chat-message';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,7 +16,6 @@ export function ChatInterface() {
   const [isPending, setIsPending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,12 +28,10 @@ export function ChatInterface() {
     }
   }, [messages]);
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const question = input.trim();
+  const sendMessage = async (messageContent: string) => {
+    const question = messageContent.trim();
     if (!question || isPending || isUploading) return;
 
-    setInput('');
     const userMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'user', content: question };
     const loadingMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'loading', content: '...' };
 
@@ -56,6 +53,17 @@ export function ChatInterface() {
     } finally {
       setIsPending(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessage(input);
+    setInput('');
+  };
+
+  const handleSimulate = async () => {
+    const simulatedQuestion = "What does error code 16#8090 on a PLC 1200 mean?";
+    await sendMessage(simulatedQuestion);
   };
 
   const handleUpload = async () => {
@@ -95,7 +103,11 @@ export function ChatInterface() {
 
   return (
     <div className="flex-1 flex flex-col h-full w-full max-w-4xl mx-auto py-6 px-4">
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-end mb-4 gap-2">
+        <Button onClick={handleSimulate} disabled={isUploading || isPending}>
+          <Play className="mr-2 h-4 w-4" />
+          Run Simulation
+        </Button>
         <Button onClick={handleUpload} disabled={isUploading || isPending}>
           <Upload className="mr-2 h-4 w-4" />
           {isUploading ? 'Uploading...' : 'Upload Manual'}
