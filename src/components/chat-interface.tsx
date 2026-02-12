@@ -12,6 +12,8 @@ import { Send, Sparkles, Loader2 } from 'lucide-react';
 import { ChatMessage } from './chat-message';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface ChatInterfaceProps {
   messages: ChatMessageType[];
@@ -50,20 +52,28 @@ export function ChatInterface({ messages, onSelectSource, isLoading }: ChatInter
       content: question,
       createdAt: serverTimestamp() as any
     };
+    
+    const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
+    
+    // Save user message (fire-and-forget with error handling)
+    addDoc(messagesCollection, userMessage).catch(async (serverError) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: `users/${user.uid}/messages`,
+        operation: 'create',
+        requestResourceData: userMessage,
+      }));
+    });
 
     try {
-      // 1. Save user message to Firestore
-      const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
-      await addDoc(messagesCollection, userMessage);
-      
-      // 2. Prepare history and call AI
+      // Prepare history for AI, including the new question
       const historyForAI = messages
         .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && msg.id !== 'initial-welcome')
         .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }));
+      historyForAI.push({ role: 'user', content: question });
 
       const { answer, sources, keyQuote } = await handleUserMessage(question, historyForAI);
 
-      // 3. Save assistant message to Firestore
+      // Save assistant message (fire-and-forget with error handling)
       const assistantMessage: Omit<ChatMessageType, 'id'> = { 
         role: 'assistant', 
         content: answer, 
@@ -71,7 +81,13 @@ export function ChatInterface({ messages, onSelectSource, isLoading }: ChatInter
         keyQuote,
         createdAt: serverTimestamp() as any 
       };
-      await addDoc(messagesCollection, assistantMessage);
+      addDoc(messagesCollection, assistantMessage).catch(async (serverError) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `users/${user.uid}/messages`,
+          operation: 'create',
+          requestResourceData: assistantMessage,
+        }));
+      });
 
     } catch (error) {
       console.error("Error sending message:", error);
@@ -80,15 +96,15 @@ export function ChatInterface({ messages, onSelectSource, isLoading }: ChatInter
         title: "Error",
         description: "Could not get a response from the AI.",
       });
-      // Optionally, save an error message to Firestore
+      // Save an error message to Firestore
       const errorMessage: Omit<ChatMessageType, 'id'> = {
-        id: crypto.randomUUID(),
         role: 'assistant',
         content: "I'm sorry, an error occurred. Please try again.",
         createdAt: serverTimestamp() as any
       };
-      const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
-      await addDoc(messagesCollection, errorMessage);
+      addDoc(messagesCollection, errorMessage).catch(serverError => {
+        console.error("Failed to save error message to firestore", serverError);
+      });
 
     } finally {
       setIsSending(false);

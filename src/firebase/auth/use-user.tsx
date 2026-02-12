@@ -13,7 +13,6 @@ export const useUser = () => {
 
   useEffect(() => {
     if (!auth) {
-      setLoading(false);
       return;
     }
 

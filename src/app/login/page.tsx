@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
@@ -23,6 +23,7 @@ export default function LoginPage() {
     const auth = useAuth();
     const { user, loading } = useUser();
     const router = useRouter();
+    const [isSigningIn, setIsSigningIn] = useState(false); // To handle button loading state
 
     useEffect(() => {
         if (!loading && user) {
@@ -31,13 +32,15 @@ export default function LoginPage() {
     }, [user, loading, router]);
 
     const handleGoogleSignIn = async () => {
-        if (!auth) return;
+        if (!auth || isSigningIn) return;
         const provider = new GoogleAuthProvider();
+        setIsSigningIn(true);
         try {
             await signInWithPopup(auth, provider);
-            router.push('/');
+            // The router.push is handled by the useEffect above
         } catch (error) {
             console.error('Error during Google sign-in:', error);
+            setIsSigningIn(false); // Allow user to try again on error
         }
     };
 
@@ -60,9 +63,13 @@ export default function LoginPage() {
                     <CardDescription>Sign in to access your dashboard</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={handleGoogleSignIn} className="w-full" variant="outline">
-                        <GoogleIcon />
-                        Sign in with Google
+                    <Button onClick={handleGoogleSignIn} className="w-full" variant="outline" disabled={isSigningIn}>
+                         {isSigningIn ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                         ) : (
+                            <GoogleIcon />
+                         )}
+                        {isSigningIn ? 'Signing In...' : 'Sign in with Google'}
                     </Button>
                 </CardContent>
             </Card>

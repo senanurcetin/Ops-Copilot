@@ -29,6 +29,8 @@ import { UserNav } from '@/components/user-nav';
 import { Bot, HomeIcon, Upload, Loader2, RotateCcw } from 'lucide-react';
 import type { Document as DocumentType, ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 const initialMessage: ChatMessage = {
@@ -125,8 +127,15 @@ export default function Home() {
 
       const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
       const messagesSnapshot = await getDocs(messagesCollection);
-      const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
+      
+      messagesSnapshot.docs.forEach(docRef => {
+        deleteDoc(docRef.ref).catch(async (serverError) => {
+           errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.ref.path,
+                operation: 'delete',
+            }));
+        });
+      });
 
       setSelectedSource(null);
       setSelectedKeyQuote(null);
