@@ -1,51 +1,54 @@
+
 'use client';
 
 import type { ChatMessage as ChatMessageType, Document } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Bot, User, Loader2, Download, BookText } from 'lucide-react';
+import { Bot, User, Loader2, Trash2, BookText } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Button } from './ui/button';
 
 interface ChatMessageProps {
   message: ChatMessageType;
   onSelectSource: (source: Document, keyQuote?: string) => void;
+  onDeleteMessage: (messageId: string) => void;
 }
 
-export function ChatMessage({ message, onSelectSource }: ChatMessageProps) {
+export function ChatMessage({ message, onSelectSource, onDeleteMessage }: ChatMessageProps) {
   const isUser = message.role === 'user';
   const isLoading = message.role === 'loading';
   const isAssistant = message.role === 'assistant';
-
-  const handleDownload = () => {
-    const blob = new Blob([message.content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `ops-copilot-report-${message.id}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  const canBeDeleted = (isUser || isAssistant) && message.id !== 'initial-welcome';
 
   return (
-    <div className={cn('flex items-start gap-3', isUser ? 'justify-end' : 'justify-start')}>
+    <div className={cn('group flex w-full items-start gap-3', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
-        <Avatar className="w-8 h-8 border">
+        <Avatar className="h-8 w-8 border">
           <AvatarFallback className="bg-slate-900 text-white">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
           </AvatarFallback>
         </Avatar>
       )}
-      <div className="group relative">
+
+      {canBeDeleted && isUser && (
+        <div className="flex h-full items-center opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-500"
+            onClick={() => onDeleteMessage(message.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      <div className="max-w-2xl">
         <div
           className={cn(
-            'max-w-2xl rounded-xl p-3 text-sm shadow-sm',
-            isUser
-              ? 'bg-indigo-600 text-white rounded-br-none'
-              : 'bg-white text-slate-800 rounded-bl-none border',
-            isLoading && 'p-0 bg-transparent shadow-none border-none'
+            'rounded-xl p-3 text-sm shadow-sm',
+            isUser ? 'rounded-br-none bg-indigo-600 text-white' : 'rounded-bl-none border bg-white text-slate-800',
+            isLoading && 'border-none bg-transparent p-0 shadow-none'
           )}
         >
           {isLoading ? (
@@ -57,14 +60,6 @@ export function ChatMessage({ message, onSelectSource }: ChatMessageProps) {
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}
         </div>
-        
-        {isAssistant && !isLoading && (
-            <div className="absolute top-0 -right-10 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDownload}>
-                    <Download className="h-4 w-4" />
-                </Button>
-            </div>
-        )}
 
         {isAssistant && message.sources && message.sources.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
@@ -73,7 +68,7 @@ export function ChatMessage({ message, onSelectSource }: ChatMessageProps) {
                 key={source.id}
                 variant="outline"
                 size="sm"
-                className="text-xs h-7 bg-white"
+                className="h-7 bg-white text-xs"
                 onClick={() => onSelectSource(source, message.keyQuote)}
               >
                 <BookText className="mr-1.5 h-3 w-3" />
@@ -83,8 +78,22 @@ export function ChatMessage({ message, onSelectSource }: ChatMessageProps) {
           </div>
         )}
       </div>
+
+      {canBeDeleted && isAssistant && (
+         <div className="flex h-full items-center opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-500"
+            onClick={() => onDeleteMessage(message.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {isUser && (
-        <Avatar className="w-8 h-8">
+        <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-slate-200 text-slate-600">
             <User className="w-4 h-4" />
           </AvatarFallback>

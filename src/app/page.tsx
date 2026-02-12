@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, getDocs, doc } from 'firebase/firestore';
 
 import {
   SidebarProvider,
@@ -149,6 +149,26 @@ export default function Home() {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!user || !firestore) return;
+
+    const messageRef = doc(firestore, `users/${user.uid}/messages`, messageId);
+    
+    // Fire-and-forget delete with error handling
+    deleteDoc(messageRef).catch(async (serverError) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: messageRef.path,
+        operation: 'delete',
+      }));
+    });
+    
+    // UI will update reactively via useCollection's onSnapshot listener
+    toast({
+      title: "Message Deleted",
+      description: "The message has been removed from the session.",
+    });
+  };
+
   return (
     <SidebarProvider defaultOpen>
         <div className="flex min-h-screen bg-slate-50">
@@ -209,6 +229,7 @@ export default function Home() {
                               messages={messages}
                               onSelectSource={handleSelectSource}
                               isLoading={messagesLoading}
+                              onDeleteMessage={handleDeleteMessage}
                              />
                         </div>
                         <ContextInspector isOpen={inspectorOpen} setIsOpen={setInspectorOpen} source={selectedSource} keyQuote={selectedKeyQuote} />

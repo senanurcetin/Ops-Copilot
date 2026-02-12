@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, FormEvent } from 'react';
@@ -19,9 +20,10 @@ interface ChatInterfaceProps {
   messages: ChatMessageType[];
   onSelectSource: (source: Document, keyQuote?: string) => void;
   isLoading: boolean;
+  onDeleteMessage: (messageId: string) => void;
 }
 
-export function ChatInterface({ messages, onSelectSource, isLoading }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMessage }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
@@ -129,9 +131,9 @@ export function ChatInterface({ messages, onSelectSource, isLoading }: ChatInter
         <ScrollArea className="flex-1 p-4" viewportRef={viewportRef}>
           <div className="flex flex-col gap-4">
             {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} onSelectSource={onSelectSource} />
+              <ChatMessage key={message.id} message={message} onSelectSource={onSelectSource} onDeleteMessage={onDeleteMessage} />
             ))}
-            {isSending && <ChatMessage message={{id: 'sending', role: 'loading', content: '...'}} onSelectSource={() => {}} />}
+            {isSending && <ChatMessage message={{id: 'sending', role: 'loading', content: '...'}} onSelectSource={() => {}} onDeleteMessage={() => {}} />}
           </div>
           {isLoading && messages.length <= 1 && (
              <div className="flex items-center justify-center pt-10">
