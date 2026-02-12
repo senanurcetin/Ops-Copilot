@@ -15,7 +15,8 @@ This is a Next.js application that serves as an AI-powered assistant for industr
 
 ## Screenshot
 
-![Ops-Copilot Application Screenshot](https://storage.googleapis.com/studiopublic/Copilot-Screenshot.png)
+<img width="2147" height="1157" alt="image" src="https://github.com/user-attachments/assets/63e76a52-267f-4f3e-abd9-5d6bf35e6cf3" />
+
 
 ## Technical Stack
 
