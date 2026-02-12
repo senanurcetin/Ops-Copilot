@@ -1,36 +1,49 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import type { ChatMessage as ChatMessageType } from '@/lib/types';
-import { handleUserMessage, handleUploadManual } from '@/app/actions';
+import { useState, useRef, useEffect, FormEvent } from 'react';
+import type { ChatMessage as ChatMessageType, Document } from '@/lib/types';
+import { handleUserMessage } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Upload, Play } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 import { ChatMessage } from './chat-message';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  onSelectSource: (source: Document) => void;
+  initialMessages?: ChatMessageType[];
+}
+
+export function ChatInterface({ onSelectSource, initialMessages }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState('');
   const [isPending, setIsPending] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
 
+  const quickActionChips = ["SF LED Error", "Motion Control 16#800D", "Duplicate IP Address", "PID Tuning"];
+
   useEffect(() => {
-    // Scroll to bottom when messages change
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+    } else {
+      setMessages([{ id: crypto.randomUUID(), role: 'assistant', content: 'Welcome to Ops-Copilot! Use the sidebar to load a knowledge base, or ask a question if one is already loaded.' }]);
+    }
+  }, [initialMessages]);
+
+  useEffect(() => {
     if (viewportRef.current) {
-        viewportRef.current.scrollTo({
+      viewportRef.current.scrollTo({
         top: viewportRef.current.scrollHeight,
         behavior: 'smooth',
       });
     }
   }, [messages]);
-  
+
   const sendMessage = async (messageContent: string) => {
     const question = messageContent.trim();
-    if (!question || isPending || isUploading) return;
+    if (!question || isPending) return;
 
     const userMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'user', content: question };
     const loadingMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'loading', content: '...' };
@@ -39,8 +52,8 @@ export function ChatInterface() {
     setIsPending(true);
 
     try {
-      const answer = await handleUserMessage(question);
-      const assistantMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: answer };
+      const { answer, sources } = await handleUserMessage(question);
+      const assistantMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: answer, sources };
       setMessages(prev => [...prev.slice(0, -1), assistantMessage]);
     } catch (error) {
       const errorMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: "I'm sorry, an error occurred. Please try again." };
@@ -55,73 +68,36 @@ export function ChatInterface() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleChipClick = async (chipText: string) => {
+    await sendMessage(chipText);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     await sendMessage(input);
     setInput('');
   };
 
-  const handleSimulate = async () => {
-    const simulatedQuestion = "What are the troubleshooting steps for error 16#8090 on an S7-1200?";
-    await sendMessage(simulatedQuestion);
-  };
-
-  const handleUpload = async () => {
-    setIsUploading(true);
-    toast({
-      title: 'Ingesting...',
-      description: 'Ingesting knowledge base. This may take a moment.',
-    });
-    try {
-      const result = await handleUploadManual();
-      if (result.success) {
-        toast({
-          title: 'Success!',
-          description: result.message,
-        });
-        setMessages([
-          { id: crypto.randomUUID(), role: 'assistant', content: 'Knowledge base loaded. How can I help you today?' }
-        ]);
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-  
-  useEffect(() => {
-    // Initial message
-    setMessages([{ id: crypto.randomUUID(), role: 'assistant', content: 'Welcome to Ops-Copilot! Upload a knowledge base or ask me a question if one is already loaded.' }]);
-  }, []);
-
   return (
     <div className="flex-1 flex flex-col h-full w-full max-w-4xl mx-auto py-6 px-4">
-      <div className="flex items-center justify-end mb-4 gap-2">
-        <Button variant="outline" onClick={handleSimulate} disabled={isUploading || isPending}>
-          <Play className="mr-2 h-4 w-4" />
-          Simulate Question
-        </Button>
-        <Button variant="outline" onClick={handleUpload} disabled={isUploading || isPending}>
-          <Upload className="mr-2 h-4 w-4" />
-          {isUploading ? 'Ingesting...' : 'Ingest Knowledge Base'}
-        </Button>
-      </div>
-      <div className="flex-1 bg-card border rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <div className="flex-1 bg-transparent flex flex-col overflow-hidden">
         <ScrollArea className="flex-1 p-4" viewportRef={viewportRef}>
           <div className="flex flex-col gap-4">
             {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
+              <ChatMessage key={message.id} message={message} onSelectSource={onSelectSource} />
             ))}
           </div>
         </ScrollArea>
-        <div className="p-4 bg-card border-t">
+        <div className="p-4 bg-transparent">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Sparkles className="h-5 w-5 text-slate-400" />
+            <span className="text-sm font-medium text-slate-500">Quick Diagnostics:</span>
+            {quickActionChips.map(chip => (
+              <Button key={chip} variant="outline" size="sm" onClick={() => handleChipClick(chip)} disabled={isPending}>
+                {chip}
+              </Button>
+            ))}
+          </div>
           <form onSubmit={handleSubmit} className="relative">
             <Textarea
               value={input}
@@ -133,11 +109,11 @@ export function ChatInterface() {
                 }
               }}
               placeholder="Ask a question about your operations..."
-              disabled={isPending || isUploading}
-              className="text-base pr-16 min-h-[40px]"
+              disabled={isPending}
+              className="text-base pr-16 min-h-[48px] rounded-lg shadow-sm"
               rows={1}
             />
-            <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" disabled={!input.trim() || isPending || isUploading}>
+            <Button type="submit" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 bg-indigo-600 hover:bg-indigo-700" disabled={!input.trim() || isPending}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>

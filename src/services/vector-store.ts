@@ -1,6 +1,6 @@
 'use server';
 
-interface Document {
+export interface Document {
   id: string;
   title: string;
   content: string;

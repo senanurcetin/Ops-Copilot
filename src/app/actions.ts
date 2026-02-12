@@ -2,20 +2,20 @@
 
 import { obtainAnswersFromDocuments } from '@/ai/flows/obtain-answers-from-documents';
 import { ingestKnowledge, type IngestKnowledgeInput } from '@/ai/flows/initial-knowledge-base-setup';
-import { searchDocuments, clearDocuments } from '@/services/vector-store';
+import { searchDocuments, clearDocuments, type Document } from '@/services/vector-store';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-export async function handleUserMessage(question: string): Promise<string> {
+export async function handleUserMessage(question: string): Promise<{ answer: string; sources: Document[] }> {
   if (!question.trim()) {
-    return "Please ask a question.";
+    return { answer: "Please ask a question.", sources: [] };
   }
 
   try {
     const relevantDocs = await searchDocuments(question);
 
     if (relevantDocs.length === 0) {
-      return "I don't have enough information to answer that. Please upload a knowledge base first.";
+      return { answer: "I don't have enough information to answer that. Please upload a knowledge base first.", sources: [] };
     }
 
     const context = relevantDocs
@@ -23,10 +23,10 @@ export async function handleUserMessage(question: string): Promise<string> {
       .join('\n\n---\n\n');
 
     const result = await obtainAnswersFromDocuments({ question, context });
-    return result.answer;
+    return { answer: result.answer, sources: relevantDocs };
   } catch (error) {
     console.error('Error handling user message:', error);
-    return 'Sorry, something went wrong while processing your request.';
+    return { answer: 'Sorry, something went wrong while processing your request.', sources: [] };
   }
 }
 
