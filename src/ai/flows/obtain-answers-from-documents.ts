@@ -27,6 +27,7 @@ export type ObtainAnswersFromDocumentsInput = z.infer<typeof ObtainAnswersFromDo
 
 const ObtainAnswersFromDocumentsOutputSchema = z.object({
   answer: z.string().describe('The answer to the user question.'),
+  keyQuote: z.string().optional().describe("The single, most directly relevant sentence or short phrase extracted *verbatim* from the 'Context Documents' that supports the answer. This quote will be used to highlight the source for the user."),
 });
 
 export type ObtainAnswersFromDocumentsOutput = z.infer<typeof ObtainAnswersFromDocumentsOutputSchema>;

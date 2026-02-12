@@ -9,4 +9,5 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'loading';
   content: string;
   sources?: Document[];
+  keyQuote?: string;
 }

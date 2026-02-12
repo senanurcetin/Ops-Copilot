@@ -12,7 +12,7 @@ type ChatHistoryItem = {
   content: string;
 };
 
-export async function handleUserMessage(question: string, chatHistory: ChatHistoryItem[]): Promise<{ answer: string; sources: Document[] }> {
+export async function handleUserMessage(question: string, chatHistory: ChatHistoryItem[]): Promise<{ answer: string; sources: Document[]; keyQuote?: string }> {
   if (!question.trim()) {
     return { answer: "Please ask a question.", sources: [] };
   }
@@ -32,7 +32,7 @@ export async function handleUserMessage(question: string, chatHistory: ChatHisto
       .join('\n\n---\n\n');
 
     const result = await obtainAnswersFromDocuments({ question, context, chatHistory });
-    return { answer: result.answer, sources: relevantDocs };
+    return { answer: result.answer, sources: relevantDocs, keyQuote: result.keyQuote };
   } catch (error) {
     console.error('Error handling user message:', error);
     return { answer: 'Sorry, something went wrong while processing your request.', sources: [] };

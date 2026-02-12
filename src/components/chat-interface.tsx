@@ -13,7 +13,7 @@ import { Textarea } from './ui/textarea';
 interface ChatInterfaceProps {
   messages: ChatMessageType[];
   setMessages: (update: React.SetStateAction<ChatMessageType[]>) => void;
-  onSelectSource: (source: Document) => void;
+  onSelectSource: (source: Document, keyQuote?: string) => void;
 }
 
 export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInterfaceProps) {
@@ -49,8 +49,8 @@ export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInt
     setIsPending(true);
 
     try {
-      const { answer, sources } = await handleUserMessage(question, historyForAI);
-      const assistantMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: answer, sources };
+      const { answer, sources, keyQuote } = await handleUserMessage(question, historyForAI);
+      const assistantMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: answer, sources, keyQuote };
       setMessages(prev => [...prev.slice(0, -1), assistantMessage]);
     } catch (error) {
       const errorMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: "I'm sorry, an error occurred. Please try again." };

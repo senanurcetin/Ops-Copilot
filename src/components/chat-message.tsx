@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  onSelectSource: (source: Document) => void;
+  onSelectSource: (source: Document, keyQuote?: string) => void;
 }
 
 export function ChatMessage({ message, onSelectSource }: ChatMessageProps) {
@@ -74,7 +74,7 @@ export function ChatMessage({ message, onSelectSource }: ChatMessageProps) {
                 variant="outline"
                 size="sm"
                 className="text-xs h-7 bg-white"
-                onClick={() => onSelectSource(source)}
+                onClick={() => onSelectSource(source, message.keyQuote)}
               >
                 <BookText className="mr-1.5 h-3 w-3" />
                 Reference: {source.title.length > 20 ? `${source.title.substring(0, 20)}...` : source.title}

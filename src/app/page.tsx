@@ -34,13 +34,15 @@ const initialMessage: ChatMessage = {
 
 export default function Home() {
   const [selectedSource, setSelectedSource] = useState<DocumentType | null>(null);
+  const [selectedKeyQuote, setSelectedKeyQuote] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const { toast } = useToast();
 
-  const handleSelectSource = (source: DocumentType) => {
+  const handleSelectSource = (source: DocumentType, keyQuote?: string) => {
     setSelectedSource(source);
+    setSelectedKeyQuote(keyQuote || null);
     setInspectorOpen(true);
   };
 
@@ -78,6 +80,7 @@ export default function Home() {
     if (window.confirm("Are you sure you want to reset this diagnostic session? All current progress will be lost.")) {
       setMessages([initialMessage]);
       setSelectedSource(null);
+      setSelectedKeyQuote(null);
       setInspectorOpen(false);
       toast({
         title: "Session Cleared",
@@ -147,7 +150,7 @@ export default function Home() {
                               onSelectSource={handleSelectSource}
                              />
                         </div>
-                        <ContextInspector isOpen={inspectorOpen} setIsOpen={setInspectorOpen} source={selectedSource} />
+                        <ContextInspector isOpen={inspectorOpen} setIsOpen={setInspectorOpen} source={selectedSource} keyQuote={selectedKeyQuote} />
                     </main>
                 </div>
             </SidebarInset>
