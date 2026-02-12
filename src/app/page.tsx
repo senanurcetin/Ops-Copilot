@@ -21,15 +21,22 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInterface } from '@/components/chat-interface';
 import { ContextInspector } from '@/components/context-inspector';
 import { SystemHealthBar } from '@/components/system-health-bar';
-import { Bot, Home as HomeIcon, Upload } from 'lucide-react';
+import { Bot, Home as HomeIcon, Upload, RotateCcw } from 'lucide-react';
 import type { Document as DocumentType, ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+const initialMessage: ChatMessage = {
+  id: 'initial-welcome',
+  role: 'assistant',
+  content: 'Welcome to Ops-Copilot! Use the sidebar to load a knowledge base, or ask a question if one is already loaded.'
+};
+
 
 export default function Home() {
   const [selectedSource, setSelectedSource] = useState<DocumentType | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [initialMessages, setInitialMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const { toast } = useToast();
 
   const handleSelectSource = (source: DocumentType) => {
@@ -50,7 +57,7 @@ export default function Home() {
           title: 'Success!',
           description: result.message,
         });
-        setInitialMessages([
+        setMessages([
           { id: crypto.randomUUID(), role: 'assistant', content: 'Knowledge base loaded. How can I help you today?' }
         ]);
       } else {
@@ -64,6 +71,18 @@ export default function Home() {
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleResetSession = () => {
+    if (window.confirm("Are you sure you want to reset this diagnostic session? All current progress will be lost.")) {
+      setMessages([initialMessage]);
+      setSelectedSource(null);
+      setInspectorOpen(false);
+      toast({
+        title: "Session Cleared",
+        description: "Your diagnostic session has been reset.",
+      });
     }
   };
 
@@ -107,11 +126,26 @@ export default function Home() {
                             <SidebarTrigger className="md:hidden" />
                             <h1 className="text-xl font-bold">Industrial Operator Dashboard</h1>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleResetSession}
+                                className="text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200"
+                            >
+                                <RotateCcw className="h-5 w-5" />
+                                <span className="sr-only">Clear Session</span>
+                            </Button>
+                        </div>
                     </header>
                     <SystemHealthBar />
                     <main className="flex-1 flex overflow-hidden">
                         <div className="flex-1 flex flex-col">
-                            <ChatInterface onSelectSource={handleSelectSource} initialMessages={initialMessages} />
+                            <ChatInterface
+                              messages={messages}
+                              setMessages={setMessages}
+                              onSelectSource={handleSelectSource}
+                             />
                         </div>
                         <ContextInspector isOpen={inspectorOpen} setIsOpen={setInspectorOpen} source={selectedSource} />
                     </main>

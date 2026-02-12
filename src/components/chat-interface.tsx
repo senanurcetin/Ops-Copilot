@@ -11,26 +11,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
 
 interface ChatInterfaceProps {
+  messages: ChatMessageType[];
+  setMessages: (update: React.SetStateAction<ChatMessageType[]>) => void;
   onSelectSource: (source: Document) => void;
-  initialMessages?: ChatMessageType[];
 }
 
-export function ChatInterface({ onSelectSource, initialMessages }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
+export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
 
   const quickActionChips = ["SF LED Error", "Motion Control 16#800D", "Duplicate IP Address", "PID Tuning"];
-
-  useEffect(() => {
-    if (initialMessages && initialMessages.length > 0) {
-      setMessages(initialMessages);
-    } else {
-      setMessages([{ id: crypto.randomUUID(), role: 'assistant', content: 'Welcome to Ops-Copilot! Use the sidebar to load a knowledge base, or ask a question if one is already loaded.' }]);
-    }
-  }, [initialMessages]);
 
   useEffect(() => {
     if (viewportRef.current) {
