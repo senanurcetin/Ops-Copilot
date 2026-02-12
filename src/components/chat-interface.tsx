@@ -1,26 +1,32 @@
 'use client';
 
 import { useState, useRef, useEffect, FormEvent } from 'react';
+import { useUser, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 import type { ChatMessage as ChatMessageType, Document } from '@/lib/types';
 import { handleUserMessage } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles, Loader2 } from 'lucide-react';
 import { ChatMessage } from './chat-message';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from './ui/textarea';
 
 interface ChatInterfaceProps {
   messages: ChatMessageType[];
-  setMessages: (update: React.SetStateAction<ChatMessageType[]>) => void;
   onSelectSource: (source: Document, keyQuote?: string) => void;
+  isLoading: boolean;
 }
 
-export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onSelectSource, isLoading }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
-  const [isPending, setIsPending] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
+
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const quickActionChips = ["SF LED Error", "Motion Control 16#800D", "Duplicate IP Address", "PID Tuning"];
 
@@ -35,33 +41,57 @@ export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInt
 
   const sendMessage = async (messageContent: string) => {
     const question = messageContent.trim();
-    if (!question || isPending) return;
+    if (!question || isSending || !user || !firestore) return;
 
-    const userMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'user', content: question };
-    const loadingMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'loading', content: '...' };
+    setIsSending(true);
 
-    // Prepare chat history for the AI. This should include all messages before the current one.
-    const historyForAI = messages
-      .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && msg.id !== 'initial-welcome')
-      .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }));
-
-    setMessages(prev => [...prev, userMessage, loadingMessage]);
-    setIsPending(true);
+    const userMessage: Omit<ChatMessageType, 'id'> = { 
+      role: 'user', 
+      content: question,
+      createdAt: serverTimestamp() as any
+    };
 
     try {
+      // 1. Save user message to Firestore
+      const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
+      await addDoc(messagesCollection, userMessage);
+      
+      // 2. Prepare history and call AI
+      const historyForAI = messages
+        .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && msg.id !== 'initial-welcome')
+        .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }));
+
       const { answer, sources, keyQuote } = await handleUserMessage(question, historyForAI);
-      const assistantMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: answer, sources, keyQuote };
-      setMessages(prev => [...prev.slice(0, -1), assistantMessage]);
+
+      // 3. Save assistant message to Firestore
+      const assistantMessage: Omit<ChatMessageType, 'id'> = { 
+        role: 'assistant', 
+        content: answer, 
+        sources, 
+        keyQuote,
+        createdAt: serverTimestamp() as any 
+      };
+      await addDoc(messagesCollection, assistantMessage);
+
     } catch (error) {
-      const errorMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: "I'm sorry, an error occurred. Please try again." };
-      setMessages(prev => [...prev.slice(0, -1), errorMessage]);
+      console.error("Error sending message:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: "Could not get a response from the AI.",
       });
+      // Optionally, save an error message to Firestore
+      const errorMessage: Omit<ChatMessageType, 'id'> = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: "I'm sorry, an error occurred. Please try again.",
+        createdAt: serverTimestamp() as any
+      };
+      const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
+      await addDoc(messagesCollection, errorMessage);
+
     } finally {
-      setIsPending(false);
+      setIsSending(false);
     }
   };
 
@@ -75,6 +105,8 @@ export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInt
     setInput('');
   };
 
+  const isPending = isSending || isLoading;
+
   return (
     <div className="flex-1 flex flex-col h-full w-full max-w-4xl mx-auto py-6 px-4">
       <div className="flex-1 bg-transparent flex flex-col overflow-hidden">
@@ -83,7 +115,13 @@ export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInt
             {messages.map((message) => (
               <ChatMessage key={message.id} message={message} onSelectSource={onSelectSource} />
             ))}
+            {isSending && <ChatMessage message={{id: 'sending', role: 'loading', content: '...'}} onSelectSource={() => {}} />}
           </div>
+          {isLoading && messages.length <= 1 && (
+             <div className="flex items-center justify-center pt-10">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+             </div>
+          )}
         </ScrollArea>
         <div className="p-4 bg-transparent">
           <div className="mb-3 flex flex-wrap items-center gap-2">

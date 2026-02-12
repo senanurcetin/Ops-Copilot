@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export interface Document {
   id: string;
   title: string;
@@ -10,4 +12,5 @@ export interface ChatMessage {
   content: string;
   sources?: Document[];
   keyQuote?: string;
+  createdAt?: Timestamp | Date;
 }

@@ -1,0 +1,15 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only read and write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users can only manage their own messages
+    match /users/{userId}/messages/{messageId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

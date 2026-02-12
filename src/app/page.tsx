@@ -1,6 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser, useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy, deleteDoc, getDocs } from 'firebase/firestore';
+
 import {
   SidebarProvider,
   Sidebar,
@@ -21,9 +25,11 @@ import { useToast } from '@/hooks/use-toast';
 import { ChatInterface } from '@/components/chat-interface';
 import { ContextInspector } from '@/components/context-inspector';
 import { SystemHealthBar } from '@/components/system-health-bar';
-import { Bot, Home as HomeIcon, Upload, RotateCcw } from 'lucide-react';
+import { UserNav } from '@/components/user-nav';
+import { Bot, HomeIcon, Upload, Loader2, RotateCcw } from 'lucide-react';
 import type { Document as DocumentType, ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
 
 const initialMessage: ChatMessage = {
   id: 'initial-welcome',
@@ -33,12 +39,46 @@ const initialMessage: ChatMessage = {
 
 
 export default function Home() {
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
+
   const [selectedSource, setSelectedSource] = useState<DocumentType | null>(null);
   const [selectedKeyQuote, setSelectedKeyQuote] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
   const { toast } = useToast();
+
+  const messagesQuery = useMemo(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, `users/${user.uid}/messages`), orderBy('createdAt', 'asc'));
+  }, [user, firestore]);
+  
+  const { data: messagesData, loading: messagesLoading } = useCollection(messagesQuery);
+
+  const messages: ChatMessage[] = useMemo(() => {
+    if (messagesLoading || !messagesData) return [initialMessage];
+    const formattedMessages = messagesData.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as ChatMessage[];
+    return formattedMessages.length > 0 ? formattedMessages : [initialMessage];
+  }, [messagesData, messagesLoading]);
+
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, userLoading, router]);
+
+  if (userLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
 
   const handleSelectSource = (source: DocumentType, keyQuote?: string) => {
     setSelectedSource(source);
@@ -59,9 +99,7 @@ export default function Home() {
           title: 'Success!',
           description: result.message,
         });
-        setMessages([
-          { id: crypto.randomUUID(), role: 'assistant', content: 'Knowledge base loaded. How can I help you today?' }
-        ]);
+        // This is a client-side action, doesn't affect server state
       } else {
         throw new Error(result.message);
       }
@@ -76,12 +114,24 @@ export default function Home() {
     }
   };
 
-  const handleResetSession = () => {
+  const handleResetSession = async () => {
     if (window.confirm("Are you sure you want to reset this diagnostic session? All current progress will be lost.")) {
-      setMessages([initialMessage]);
+      if (!user || !firestore) return;
+
+      toast({
+        title: "Clearing Session...",
+        description: "Your diagnostic session is being reset.",
+      });
+
+      const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
+      const messagesSnapshot = await getDocs(messagesCollection);
+      const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
       setSelectedSource(null);
       setSelectedKeyQuote(null);
       setInspectorOpen(false);
+
       toast({
         title: "Session Cleared",
         description: "Your diagnostic session has been reset.",
@@ -129,7 +179,7 @@ export default function Home() {
                             <SidebarTrigger className="md:hidden" />
                             <h1 className="text-xl font-bold">Industrial Operator Dashboard</h1>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-4">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -139,6 +189,7 @@ export default function Home() {
                                 <RotateCcw className="h-5 w-5" />
                                 <span className="sr-only">Clear Session</span>
                             </Button>
+                            <UserNav />
                         </div>
                     </header>
                     <SystemHealthBar />
@@ -146,11 +197,11 @@ export default function Home() {
                         <div className="flex-1 flex flex-col">
                             <ChatInterface
                               messages={messages}
-                              setMessages={setMessages}
                               onSelectSource={handleSelectSource}
+                              isLoading={messagesLoading}
                              />
                         </div>
-                        <ContextInspector isOpen={inspectorOpen} setIsOpen={setInspectorOpen} source={selectedSource} keyQuote={selectedKeyQuote} />
+                        <ContextInspector isOpen={inspectorOpen} setIsOpen={setIsOpen} source={selectedSource} keyQuote={selectedKeyQuote} />
                     </main>
                 </div>
             </SidebarInset>
