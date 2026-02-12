@@ -1,37 +1,32 @@
 [
-  {
-    "id": "plc1200_overview",
-    "title": "Siemens SIMATIC S7-1200 Overview",
-    "content": "The SIMATIC S7-1200 controller is designed for discrete and continuous control tasks in the low to medium performance range. It is a compact, modular, and highly versatile PLC. Key features include integrated PROFINET interface, powerful technology functions for counting, measuring, and motion control, and seamless integration with HMI Basic Panels and the TIA Portal engineering framework."
-  },
-  {
-    "id": "plc1500_overview",
-    "title": "Siemens SIMATIC S7-1500 Overview",
-    "content": "The SIMATIC S7-1500 controller is the benchmark for performance, efficiency, and usability in the medium to high-end machine and plant automation. It offers maximum performance with a fast backplane bus, PROFINET interface, and short reaction times. The S7-1500 is fully integrated into the TIA Portal for unified engineering and features advanced system diagnostics, security integrated by default, and a technology CPU variant for complex motion control tasks."
-  },
-  {
-    "id": "plc1200_err_16_8090",
-    "title": "S7-1200 Error: 16#8090 - I/O access error, reading",
-    "content": "Error code 16#8090 on a SIMATIC S7-1200 indicates an I/O access error during a read operation. This often means the PLC is trying to read data from a module that is not available, not configured correctly, or has failed. \n\nCommon Causes:\n1. The I/O module is physically disconnected or has lost power.\n2. The module's address in the hardware configuration (HWCN) does not match the physical setup.\n3. The module itself is defective.\n4. Incorrect wiring to the module.\n\nTroubleshooting Steps:\n1. Check the physical connection and power supply of the affected I/O module.\n2. Verify in TIA Portal that the hardware configuration matches the actual installed modules and their addresses.\n3. Check the diagnostic buffer of the CPU for more specific information about which module is failing.\n4. Inspect the wiring for any loose connections or damage.\n5. If possible, swap the module with a known working one to rule out a hardware defect."
-  },
-  {
-    "id": "plc1200_err_16_80C8",
-    "title": "S7-1200 Error: 16#80C8 - Module configuration/parameter assignment error",
-    "content": "Error code 16#80C8 indicates a problem with the configuration or parameterization of a module. This means there's a mismatch between the parameters set in the TIA Portal project and what the module supports or expects.\n\nCommon Causes:\n1. An incorrect module type is configured in the hardware configuration.\n2. Incompatible firmware version between the project and the physical module.\n3. Parameter settings for a channel (e.g., input type, range) are invalid for the specific module.\n\nTroubleshooting Steps:\n1. Ensure the module part number in your TIA Portal project exactly matches the physical module.\n2. Check for firmware compatibility. You may need to update the module's firmware or adjust the project settings.\n3. Review all parameter assignments for the module in the device view and ensure they are valid.\n4. Download the hardware configuration to the PLC again after making corrections."
-  },
-  {
-    "id": "plc1500_err_16_02_4004",
-    "title": "S7-1500 Error: 16#02:4004 - Rack failure",
-    "content": "Error 16#02:4004 on a SIMATIC S7-1500 indicates a rack or station failure. This is a serious error suggesting a problem with the backplane bus or a central module.\n\nCommon Causes:\n1. A module on the backplane has failed catastrophically.\n2. The backplane bus connector itself is damaged or disconnected.\n3. Power supply issue affecting the entire rack.\n4. A CPU or interface module failure.\n\nTroubleshooting Steps:\n1. Check the power supply for the rack. Ensure it's stable and within specifications.\n2. Visually inspect all modules on the rack. Look for any modules with red fault LEDs.\n3. Systematically remove modules from the rack (with power off) to see if the fault clears. Start with peripheral modules and work your way in.\n4. Check the diagnostic buffer for messages that occurred just before the rack failure, which might point to the initial cause.\n5. If an ET 200SP remote I/O station is involved, check the head station and network connections."
-  },
-  {
-    "id": "plc1500_err_16_0D_4302",
-    "title": "S7-1500 Error: 16#0D:4302 - Time synchronization failure",
-    "content": "Error 16#0D:4302 points to a failure in the time-of-day synchronization. The PLC failed to synchronize its clock with a configured time master.\n\nCommon Causes:\n1. The NTP server is unreachable due to network issues (firewall, incorrect IP).\n2. The PLC is configured as a time slave, but no time master is active on the network.\n3. Incorrect time settings in the CPU properties (time zone, daylight saving).\n\nTroubleshooting Steps:\n1. Verify network connectivity between the PLC and the NTP server. Use ping or other network tools.\n2. Check the CPU's PROFINET interface settings and ensure it's on the correct network.\n3. In the CPU properties under 'Time of day', verify the synchronization mechanism and NTP server address are correct.\n4. Ensure that if you're using SINUMERIK as a time master, it is configured and running correctly."
-  },
-  {
-    "id": "tia_portal_info",
-    "title": "TIA Portal (Totally Integrated Automation Portal)",
-    "content": "TIA Portal is an engineering framework for implementing automation solutions with Siemens hardware. It provides a unified software environment for controller programming, HMI visualization, and network configuration. Its key benefit is the integration of all necessary tools into one platform, which simplifies development, commissioning, and diagnostics."
-  }
-]
+    {
+      "id": "sf-led-error-s7-1200",
+      "title": "S7-1200 SF LED Error (System Fault)",
+      "content": "The SF (System Fault) LED on a Siemens S7-1200 indicates a hardware or software error. Common causes include: module failure, incorrect wiring, configuration mismatch in TIA Portal, or a critical program error. To diagnose, connect to the PLC with TIA Portal and open the 'Diagnostics' buffer. The buffer provides detailed error messages and codes to pinpoint the exact cause. Check for loose connections and verify module configuration."
+    },
+    {
+      "id": "motion-control-error-800d",
+      "title": "Motion Control Error 16#800D on S7-1500",
+      "content": "Error 16#800D (hex) on an S7-1500 Technology Object (TO) often means 'Command aborted by another command'. This happens when a new motion command is issued while another is still active on the same axis. For example, trying to start a 'MC_MoveRelative' before a 'MC_Home' is complete. To resolve, ensure that motion commands are properly sequenced. Use the 'Done' output of one motion block to trigger the next. Check the status of the 'Busy' output before issuing new commands."
+    },
+    {
+      "id": "duplicate-ip-s7",
+      "title": "Duplicate IP Address on Siemens PLC",
+      "content": "A duplicate IP address on the network will cause communication failures with a Siemens PLC. The PLC may stop responding or show intermittent connectivity. To fix, use the 'Accessible Devices' tool in TIA Portal to scan the network. This tool can detect devices and their IP addresses. If a conflict is found, assign a unique IP address to the PLC via the 'Online & Diagnostics' settings. Ensure the new IP is outside the DHCP range of the router if one is present."
+    },
+    {
+        "id": "pid-tuning-guide",
+        "title": "Comprehensive PID Controller Tuning Guide",
+        "content": "PID (Proportional-Integral-Derivative) controller tuning is a critical process for optimizing industrial automation loops. It involves adjusting three parameters: Proportional (P), Integral (I), and Derivative (D).\n\nKey Parameters:\n- Proportional (Kp): Reacts to the current error. A higher value provides a faster response, but can lead to instability and oscillation.\n- Integral (Ki): Accumulates past errors to eliminate steady-state offset. A smaller integral time (Ti) makes the controller more aggressive, but can cause overshoot.\n- Derivative (Kd): Predicts future errors based on the current rate of change. It helps to dampen oscillations and improve stability. Too much derivative action can make the system sensitive to noise.\n\nZiegler-Nichols Tuning Method (A common manual approach):\n1. Initial Setup: Set the Integral (I) and Derivative (D) gains to zero (or their highest time value, effectively disabling them).\n2. Find Ultimate Gain (Ku): Gradually increase the Proportional (P) gain until the system begins to oscillate at a stable, constant amplitude. The P gain value at this point is the Ultimate Gain (Ku).\n3. Measure Ultimate Period (Tu): Measure the time period (in seconds) of one full oscillation cycle.\n4. Calculate PID Parameters:\n   - For a PI Controller: Kp = 0.45 * Ku, Integral Time (Ti) = Tu / 1.2\n   - For a PID Controller: Kp = 0.6 * Ku, Ti = Tu / 2, Derivative Time (Td) = Tu / 8\n5. Fine-Tuning: Apply these calculated values and observe the system. If the response is too slow, slightly decrease Ti. If there is too much overshoot, slightly increase Ti. If the system is noisy or unstable, you may need to add a filter to the derivative term or slightly decrease Td."
+    },
+    {
+      "id": "s7-1500-display-fault",
+      "title": "S7-1500 Display Fault Codes",
+      "content": "The S7-1500 display provides direct diagnostic information. A red screen indicates a serious fault. Use the arrow keys to navigate to 'Diagnostics' and view the active error messages. Common faults include I/O module errors (e.g., 'Channel error'), power supply issues, or network problems like a PROFINET device failure. The display will show the affected module and a brief description, which can be cross-referenced with the TIA Portal diagnostics buffer for more detail."
+    },
+    {
+      "id": "tia-portal-version-mismatch",
+      "title": "TIA Portal Project vs. Firmware Version Mismatch",
+      "content": "An error during download to a PLC can occur if the TIA Portal project version for a hardware module does not match the actual firmware version of the physical module. To resolve, right-click the device in TIA Portal and select 'Change device/version'. Select the correct firmware version from the catalog to match your hardware. This ensures the compiled code is compatible with the PLC's capabilities."
+    }
+  ]

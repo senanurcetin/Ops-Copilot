@@ -35,7 +35,7 @@ export async function storeDocument(doc: Document): Promise<void> {
 
 /**
  * Searches for documents in the simulated vector store.
- * This function performs a basic case-insensitive text search on the title and content.
+ * This function performs a more robust keyword search on title and content.
  * A real implementation would perform a vector similarity search.
  */
 export async function searchDocuments(query: string): Promise<Document[]> {
@@ -45,44 +45,54 @@ export async function searchDocuments(query: string): Promise<Document[]> {
     }
 
     const lowerCaseQuery = query.toLowerCase();
+    const queryWordsArray = lowerCaseQuery.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 1);
+    const queryWords = new Set(queryWordsArray);
 
-    // Prioritize documents where the title is a close match
-    const titleMatches = documents.filter(doc => 
-        doc.title.toLowerCase().includes(lowerCaseQuery)
-    );
-
-    if (titleMatches.length > 0) {
-        return titleMatches;
-    }
-
-    // If no title match, search the content
-    const contentMatches = documents.filter(doc => 
-        doc.content.toLowerCase().includes(lowerCaseQuery)
-    );
-    
-    if (contentMatches.length > 0) {
-        return contentMatches.slice(0, 5);
-    }
-    
-    // A fallback keyword scoring mechanism
-    const queryWords = new Set(lowerCaseQuery.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 1));
     if (queryWords.size === 0) {
         return [];
     }
 
     const scoredDocs = documents.map(doc => {
-        const titleWords = new Set(doc.title.toLowerCase().replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/));
-        const contentWords = new Set(doc.content.toLowerCase().replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/));
+        const titleText = doc.title.toLowerCase();
+        const contentText = doc.content.toLowerCase();
         
         let score = 0;
+
+        // Exact phrase match in title (highest score)
+        if (titleText.includes(lowerCaseQuery)) {
+            score += 50;
+        }
+        
+        // Exact phrase match in content
+        if (contentText.includes(lowerCaseQuery)) {
+            score += 20;
+        }
+        
+        const titleWords = new Set(titleText.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/));
+        const contentWords = new Set(contentText.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/));
+        
+        let wordsFoundInTitle = 0;
+        let wordsFoundInContent = 0;
+        
         for (const word of queryWords) {
             if (titleWords.has(word)) {
-                score += 5; // Higher weight for title matches
+                score += 10; // High weight for title keyword matches
+                wordsFoundInTitle++;
             }
             if (contentWords.has(word)) {
-                score += 1;
+                score += 2; // Lower weight for content keyword matches
+                wordsFoundInContent++;
             }
         }
+        
+        // Bonus if all query words are in the title or content
+        if (wordsFoundInTitle === queryWords.size) {
+            score += 30;
+        }
+        if (wordsFoundInContent === queryWords.size) {
+            score += 10;
+        }
+
         return { doc, score };
     });
 
