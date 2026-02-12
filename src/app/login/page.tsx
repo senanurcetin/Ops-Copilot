@@ -45,7 +45,7 @@ export default function LoginPage() {
             toast({
                 variant: 'destructive',
                 title: 'Sign-In Failed',
-                description: 'Could not sign in with Google. Please ensure this method is enabled in your Firebase project and try again.',
+                description: error.message || 'Could not sign in with Google. Please try again.',
             });
             setIsSigningIn(false); // Allow user to try again on error
         }
