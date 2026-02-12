@@ -61,7 +61,7 @@ export async function searchDocuments(query: string): Promise<Document[]> {
     );
     
     if (contentMatches.length > 0) {
-        return contentMatches.slice(0, 3);
+        return contentMatches.slice(0, 5);
     }
     
     // A fallback keyword scoring mechanism
@@ -88,8 +88,8 @@ export async function searchDocuments(query: string): Promise<Document[]> {
 
     const sortedDocs = scoredDocs.filter(item => item.score > 0).sort((a, b) => b.score - a.score);
 
-    // Return up to 3 most relevant documents
-    return sortedDocs.slice(0, 3).map(item => item.doc);
+    // Return up to 5 most relevant documents
+    return sortedDocs.slice(0, 5).map(item => item.doc);
 }
 
 
