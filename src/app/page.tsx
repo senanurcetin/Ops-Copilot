@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, deleteDoc, getDocs, doc } from 'firebase/firestore';
@@ -83,13 +83,13 @@ export default function Home() {
     );
   }
 
-  const handleSelectSource = (source: DocumentType, keyQuote?: string) => {
+  const handleSelectSource = useCallback((source: DocumentType, keyQuote?: string) => {
     setSelectedSource(source);
     setSelectedKeyQuote(keyQuote || null);
     setInspectorOpen(true);
-  };
+  }, []);
 
-  const handleUpload = async () => {
+  const handleUpload = useCallback(async () => {
     setIsUploading(true);
     toast({
       title: 'Ingesting...',
@@ -102,7 +102,6 @@ export default function Home() {
           title: 'Success!',
           description: result.message,
         });
-        // This is a client-side action, doesn't affect server state
       } else {
         throw new Error(result.message);
       }
@@ -115,9 +114,9 @@ export default function Home() {
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [toast]);
 
-  const handleResetSession = async () => {
+  const handleResetSession = useCallback(async () => {
     if (window.confirm("Are you sure you want to reset this diagnostic session? All current progress will be lost.")) {
       if (!user || !firestore) return;
 
@@ -129,14 +128,16 @@ export default function Home() {
       const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
       const messagesSnapshot = await getDocs(messagesCollection);
       
-      messagesSnapshot.docs.forEach(docRef => {
-        deleteDoc(docRef.ref).catch(async (serverError) => {
+      const deletePromises = messagesSnapshot.docs.map(docRef => {
+        return deleteDoc(docRef.ref).catch(async () => {
            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.ref.path,
                 operation: 'delete',
             }));
         });
       });
+
+      await Promise.all(deletePromises);
 
       setSelectedSource(null);
       setSelectedKeyQuote(null);
@@ -147,27 +148,25 @@ export default function Home() {
         description: "Your diagnostic session has been reset.",
       });
     }
-  };
+  }, [user, firestore, toast]);
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
     if (!user || !firestore) return;
 
     const messageRef = doc(firestore, `users/${user.uid}/messages`, messageId);
     
-    // Fire-and-forget delete with error handling
-    deleteDoc(messageRef).catch(async (serverError) => {
+    deleteDoc(messageRef).catch(async () => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: messageRef.path,
         operation: 'delete',
       }));
     });
     
-    // UI will update reactively via useCollection's onSnapshot listener
     toast({
       title: "Message Deleted",
       description: "The message has been removed from the session.",
     });
-  };
+  }, [user, firestore, toast]);
 
   return (
     <SidebarProvider defaultOpen>
