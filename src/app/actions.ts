@@ -6,23 +6,32 @@ import { searchDocuments, clearDocuments, type Document } from '@/services/vecto
 import { promises as fs } from 'fs';
 import path from 'path';
 
-export async function handleUserMessage(question: string): Promise<{ answer: string; sources: Document[] }> {
+// Define the type for the history items passed to the action.
+type ChatHistoryItem = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+export async function handleUserMessage(question: string, chatHistory: ChatHistoryItem[]): Promise<{ answer: string; sources: Document[] }> {
   if (!question.trim()) {
     return { answer: "Please ask a question.", sources: [] };
   }
 
   try {
+    // Search is based on the most recent question to find relevant context.
     const relevantDocs = await searchDocuments(question);
 
+    // If there's a long conversation, the most recent question might be a follow-up.
+    // A more advanced implementation might search based on a summary of the conversation.
     if (relevantDocs.length === 0) {
-      return { answer: "I don't have enough information to answer that. Please upload a knowledge base first.", sources: [] };
+      // Let the AI handle this, it might be a general question.
     }
 
     const context = relevantDocs
       .map(doc => `Title: ${doc.title}\nContent: ${doc.content}`)
       .join('\n\n---\n\n');
 
-    const result = await obtainAnswersFromDocuments({ question, context });
+    const result = await obtainAnswersFromDocuments({ question, context, chatHistory });
     return { answer: result.answer, sources: relevantDocs };
   } catch (error) {
     console.error('Error handling user message:', error);

@@ -40,11 +40,16 @@ export function ChatInterface({ messages, setMessages, onSelectSource }: ChatInt
     const userMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'user', content: question };
     const loadingMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'loading', content: '...' };
 
+    // Prepare chat history for the AI. This should include all messages before the current one.
+    const historyForAI = messages
+      .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && msg.id !== 'initial-welcome')
+      .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }));
+
     setMessages(prev => [...prev, userMessage, loadingMessage]);
     setIsPending(true);
 
     try {
-      const { answer, sources } = await handleUserMessage(question);
+      const { answer, sources } = await handleUserMessage(question, historyForAI);
       const assistantMessage: ChatMessageType = { id: crypto.randomUUID(), role: 'assistant', content: answer, sources };
       setMessages(prev => [...prev.slice(0, -1), assistantMessage]);
     } catch (error) {
