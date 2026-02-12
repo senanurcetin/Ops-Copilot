@@ -7,6 +7,7 @@ import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bot, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Define a simple SVG for Google Icon
 const GoogleIcon = () => (
@@ -24,6 +25,7 @@ export default function LoginPage() {
     const { user, loading } = useUser();
     const router = useRouter();
     const [isSigningIn, setIsSigningIn] = useState(false); // To handle button loading state
+    const { toast } = useToast();
 
     useEffect(() => {
         if (!loading && user) {
@@ -38,8 +40,13 @@ export default function LoginPage() {
         try {
             await signInWithPopup(auth, provider);
             // The router.push is handled by the useEffect above
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error during Google sign-in:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Sign-In Failed',
+                description: 'Could not sign in with Google. Please ensure this method is enabled in your Firebase project and try again.',
+            });
             setIsSigningIn(false); // Allow user to try again on error
         }
     };
@@ -63,7 +70,7 @@ export default function LoginPage() {
                     <CardDescription>Sign in to access your dashboard</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={handleGoogleSignIn} className="w-full" variant="outline" disabled={isSigningIn}>
+                    <Button onClick={handleGoogleSignIn} className="w-full" variant="outline" disabled={isSigningIn || !auth}>
                          {isSigningIn ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                          ) : (
