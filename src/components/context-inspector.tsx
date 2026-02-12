@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Document } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import { X, ClipboardCheck } from "lucide-react";
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 interface ContextInspectorProps {
   isOpen: boolean;
@@ -18,19 +19,21 @@ interface ContextInspectorProps {
 
 const Highlight = ({ text, highlight }: { text: string; highlight: string | null }) => {
   const highlightRef = useRef<HTMLSpanElement>(null);
-  const scrolled = useRef(false);
 
   useEffect(() => {
-    if (highlightRef.current && !scrolled.current) {
-      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      scrolled.current = true;
+    const element = highlightRef.current;
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Apply a temporary highlight that fades
+      element.classList.add('bg-yellow-200', 'transition-colors', 'duration-1000', 'ease-out');
+      const timer = setTimeout(() => {
+        element.classList.remove('bg-yellow-200');
+      }, 2000); // Highlight stays for 2s, then fades over 1s
+
+      return () => clearTimeout(timer);
     }
-  }, [highlight]);
-
-  // Reset scrolled ref when source changes
-  useEffect(() => {
-    scrolled.current = false;
-  }, [text]);
+  }, [highlight, text]); // Rerun when the source text or quote changes
 
   if (!highlight || !text.toLowerCase().includes(highlight.toLowerCase())) {
     return <>{text}</>;
@@ -45,7 +48,7 @@ const Highlight = ({ text, highlight }: { text: string; highlight: string | null
         if (firstMatch && part.toLowerCase() === highlight.toLowerCase()) {
           firstMatch = false;
           return (
-            <mark key={i} ref={highlightRef} className="bg-emerald-200/70 rounded px-1">
+            <mark key={i} ref={highlightRef} className="bg-transparent rounded-sm px-0.5">
               {part}
             </mark>
           );
@@ -57,9 +60,46 @@ const Highlight = ({ text, highlight }: { text: string; highlight: string | null
 };
 
 
-const ChecklistContent = ({ content, keyQuote }: { content: string; keyQuote: string | null }) => {
+const ChecklistContent = ({ content, keyQuote, documentId }: { content: string; keyQuote: string | null; documentId: string }) => {
+  const { toast } = useToast();
   const lines = content.split('\n').filter(line => line.trim() !== '');
   const checklistItemRegex = /^\d+\.\s(.+)/;
+
+  const checklistItems = lines
+    .map((line, index) => ({ match: line.match(checklistItemRegex), line, index }))
+    .filter(({ match }) => match)
+    .map(({ match, index }) => ({ id: `step-${index}`, text: match![1] }));
+  
+  const [checkedState, setCheckedState] = useState<Record<string, boolean>>({});
+
+  // Reset checked state when the document content changes
+  useEffect(() => {
+    setCheckedState({});
+  }, [content]);
+
+  const handleCheckChange = (id: string) => {
+    setCheckedState(prev => ({...prev, [id]: !prev[id]}));
+  };
+
+  const handleLogProgress = () => {
+    const completedSteps = checklistItems
+      .filter(item => checkedState[item.id])
+      .map(item => item.text);
+    
+    // For this MVP, we log to the console. In a real app, this would be sent to a backend service.
+    console.log("Logging progress for operator: user-123", {
+      documentId: documentId,
+      completedSteps,
+      timestamp: new Date().toISOString()
+    });
+
+    toast({
+      title: "Progress Logged",
+      description: `${completedSteps.length} step(s) have been logged for maintenance records.`
+    });
+  };
+
+  const isChecklist = checklistItems.length > 0;
 
   return (
     <div className="space-y-4">
@@ -67,11 +107,17 @@ const ChecklistContent = ({ content, keyQuote }: { content: string; keyQuote: st
         const match = line.match(checklistItemRegex);
         if (match) {
           const id = `step-${index}`;
+          const stepText = match[1];
           return (
             <div key={id} className="flex items-start gap-3 p-2 rounded-md hover:bg-slate-50">
-              <Checkbox id={id} className="mt-1" />
+              <Checkbox 
+                id={id} 
+                className="mt-1 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                checked={!!checkedState[id]}
+                onCheckedChange={() => handleCheckChange(id)}
+              />
               <Label htmlFor={id} className="font-normal text-slate-800 flex-1 cursor-pointer">
-                 <Highlight text={match[1]} highlight={keyQuote} />
+                 <Highlight text={stepText} highlight={keyQuote} />
               </Label>
             </div>
           );
@@ -82,13 +128,18 @@ const ChecklistContent = ({ content, keyQuote }: { content: string; keyQuote: st
           </p>
         );
       })}
+      {isChecklist && (
+        <Button onClick={handleLogProgress} className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700">
+          <ClipboardCheck className="mr-2 h-4 w-4" />
+          Log Progress
+        </Button>
+      )}
     </div>
   );
 };
 
 
 export function ContextInspector({ isOpen, setIsOpen, source, keyQuote }: ContextInspectorProps) {
-    
   return (
     <aside
       className={cn(
@@ -110,7 +161,7 @@ export function ContextInspector({ isOpen, setIsOpen, source, keyQuote }: Contex
                     <h3 className="font-semibold text-indigo-600">{source.title}</h3>
                     <p className="text-xs text-gray-500">ID: {source.id}</p>
                   </div>
-                   <ChecklistContent content={source.content} keyQuote={keyQuote} />
+                   <ChecklistContent content={source.content} keyQuote={keyQuote} documentId={source.id} />
                 </div>
             </ScrollArea>
         </div>
