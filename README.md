@@ -4,6 +4,8 @@ Ops-Copilot is an industrial AI assistant for factory operators who need fast, d
 
 ![Ops-Copilot interface](https://github.com/user-attachments/assets/63e76a52-267f-4f3e-abd9-5d6bf35e6cf3)
 
+Demo: [YouTube walkthrough](https://www.youtube.com/watch?v=G9jLMHL1fvg)
+
 ## Why this project exists
 
 Industrial troubleshooting often breaks down when operators must search scattered PDFs, tribal knowledge, or maintenance notes under time pressure. Ops-Copilot demonstrates a lightweight way to centralize that knowledge and turn it into a practical assistant with context, auditability, and repeatable workflows.
