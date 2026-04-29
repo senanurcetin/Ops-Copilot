@@ -1,0 +1,98 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 3 * * 0'  # Run weekly on Sunday at 3 AM UTC
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    name: NPM Audit
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+
+  security-headers:
+    runs-on: ubuntu-latest
+    name: Security Headers Check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check security headers in next.config
+        run: |
+          if grep -q "Strict-Transport-Security" next.config.ts; then
+            echo "✓ HSTS header configured"
+          else
+            echo "⚠ HSTS header not configured"
+          fi
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Check
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'Ops-Copilot'
+          path: '.'
+          format: 'JSON'
+          args: >
+            --enableExperimental
+            --exclude node_modules
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: reports/
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        language: [ 'javascript', 'typescript' ]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
