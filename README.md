@@ -6,7 +6,9 @@ Ops-Copilot is an industrial AI assistant for factory operators who need fast, d
 
 Demo: [YouTube walkthrough](https://www.youtube.com/watch?v=G9jLMHL1fvg)
 
-Public case study: `/case-study`
+Portfolio case study: [senanur-cetin.vercel.app/projects/ops-copilot](https://senanur-cetin.vercel.app/projects/ops-copilot)
+
+In-app case study route: `/case-study` after running the app locally
 
 GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 
