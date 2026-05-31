@@ -1,0 +1,62 @@
+[
+  {
+    "feature": "Attribute 57",
+    "coefficient": 2.2215,
+    "abs_coefficient": 2.2215,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 60",
+    "coefficient": 1.9297,
+    "abs_coefficient": 1.9297,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 389",
+    "coefficient": 1.3112,
+    "abs_coefficient": 1.3112,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 62",
+    "coefficient": 1.2857,
+    "abs_coefficient": 1.2857,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 334",
+    "coefficient": 1.2538,
+    "abs_coefficient": 1.2538,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 133",
+    "coefficient": -1.2042,
+    "abs_coefficient": 1.2042,
+    "direction": "Higher values decrease failure risk"
+  },
+  {
+    "feature": "Attribute 355",
+    "coefficient": -1.1192,
+    "abs_coefficient": 1.1192,
+    "direction": "Higher values decrease failure risk"
+  },
+  {
+    "feature": "Attribute 342",
+    "coefficient": 1.1089,
+    "abs_coefficient": 1.1089,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 217",
+    "coefficient": 1.0745,
+    "abs_coefficient": 1.0745,
+    "direction": "Higher values increase failure risk"
+  },
+  {
+    "feature": "Attribute 68",
+    "coefficient": -1.0449,
+    "abs_coefficient": 1.0449,
+    "direction": "Higher values decrease failure risk"
+  }
+]

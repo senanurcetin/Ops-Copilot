@@ -1,34 +1,42 @@
 'use client';
 
-import { FirebaseApp, initializeApp } from 'firebase/app';
+import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
 import { firebaseConfig } from './config';
 import { FirebaseProvider } from './provider';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useState } from 'react';
 
 type FirebaseInstances = {
-  app: FirebaseApp;
-  auth: Auth;
-  firestore: Firestore;
+  app: FirebaseApp | null;
+  auth: Auth | null;
+  firestore: Firestore | null;
 };
 
-// This provider is responsible for initializing Firebase on the client side.
-// It ensures that Firebase is initialized only once.
-export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [instances, setInstances] = useState<FirebaseInstances | null>(null);
+function hasFirebaseConfig() {
+  return Boolean(
+    firebaseConfig.apiKey &&
+      firebaseConfig.authDomain &&
+      firebaseConfig.projectId &&
+      firebaseConfig.appId
+  );
+}
 
-  useEffect(() => {
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const firestore = getFirestore(app);
-    setInstances({ app, auth, firestore });
-  }, []);
-
-  if (!instances) {
-    // You can render a loading spinner here if you want
-    return null;
+function createFirebaseInstances(): FirebaseInstances {
+  if (!hasFirebaseConfig()) {
+    console.warn('Firebase public configuration is incomplete. Firebase features are disabled.');
+    return { app: null, auth: null, firestore: null };
   }
+
+  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+
+  return { app, auth, firestore };
+}
+
+export function FirebaseClientProvider({ children }: { children: ReactNode }) {
+  const [instances] = useState<FirebaseInstances>(() => createFirebaseInstances());
 
   return (
     <FirebaseProvider

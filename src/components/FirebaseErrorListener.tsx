@@ -18,9 +18,6 @@ export function FirebaseErrorListener() {
         description:
           'You do not have permission to perform this action. Check Firestore rules.',
       });
-      
-      // This will also be caught by the Next.js error overlay in development
-      throw error;
     };
 
     errorEmitter.on('permission-error', handlePermissionError);

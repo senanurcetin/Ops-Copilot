@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, type FieldValue } from "firebase/firestore";
 
 export interface Document {
   id: string;
@@ -12,5 +12,5 @@ export interface ChatMessage {
   content: string;
   sources?: Document[];
   keyQuote?: string;
-  createdAt?: Timestamp | Date;
+  createdAt?: Timestamp | Date | FieldValue;
 }

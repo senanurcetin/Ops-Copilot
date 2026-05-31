@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {storeDocument} from '@/services/vector-store';
+import {storeDocuments} from '@/services/vector-store';
 
 const DocumentSchema = z.object({
   id: z.string().describe('The unique identifier of the document.'),
@@ -17,9 +17,12 @@ const DocumentSchema = z.object({
   content: z.string().describe('The content of the document.'),
 });
 
-const IngestKnowledgeInputSchema = z.array(DocumentSchema).describe(
-  'A JSON array of documents, each with an id, title, and content field.'
-);
+const IngestKnowledgeInputSchema = z.object({
+  userId: z.string().describe('The authenticated user that owns this knowledge base.'),
+  documents: z.array(DocumentSchema).describe(
+    'A JSON array of documents, each with an id, title, and content field.'
+  ),
+});
 export type IngestKnowledgeInput = z.infer<typeof IngestKnowledgeInputSchema>;
 
 export async function ingestKnowledge(knowledgeBase: IngestKnowledgeInput): Promise<void> {
@@ -32,9 +35,7 @@ const ingestKnowledgeFlow = ai.defineFlow(
     inputSchema: IngestKnowledgeInputSchema,
     outputSchema: z.void(),
   },
-  async knowledgeBase => {
-    for (const document of knowledgeBase) {
-      await storeDocument(document);
-    }
+  async input => {
+    await storeDocuments(input.userId, input.documents);
   }
 );

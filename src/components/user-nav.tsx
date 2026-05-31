@@ -21,8 +21,8 @@ export function UserNav() {
 
   const handleLogout = async () => {
     if (auth) {
+      await fetch('/api/auth/session', { method: 'DELETE' });
       await auth.signOut();
-      // The useUser hook will trigger a redirect to /login
     }
   };
 

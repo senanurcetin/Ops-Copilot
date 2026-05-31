@@ -9,6 +9,7 @@ import { X, ClipboardCheck } from "lucide-react";
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { logChecklistProgress } from '@/app/actions';
 
 interface ContextInspectorProps {
   isOpen: boolean;
@@ -60,7 +61,17 @@ const Highlight = ({ text, highlight }: { text: string; highlight: string | null
 };
 
 
-const ChecklistContent = ({ content, keyQuote, documentId }: { content: string; keyQuote: string | null; documentId: string }) => {
+const ChecklistContent = ({
+  content,
+  keyQuote,
+  documentId,
+  documentTitle,
+}: {
+  content: string;
+  keyQuote: string | null;
+  documentId: string;
+  documentTitle: string;
+}) => {
   const { toast } = useToast();
   const lines = content.split('\n').filter(line => line.trim() !== '');
   const checklistItemRegex = /^\d+\.\s(.+)/;
@@ -81,21 +92,29 @@ const ChecklistContent = ({ content, keyQuote, documentId }: { content: string; 
     setCheckedState(prev => ({...prev, [id]: !prev[id]}));
   };
 
-  const handleLogProgress = () => {
+  const handleLogProgress = async () => {
     const completedSteps = checklistItems
       .filter(item => checkedState[item.id])
       .map(item => item.text);
-    
-    // For this MVP, we log to the console. In a real app, this would be sent to a backend service.
-    console.log("Logging progress for operator: user-123", {
-      documentId: documentId,
+
+    const result = await logChecklistProgress({
+      documentId,
+      documentTitle,
       completedSteps,
-      timestamp: new Date().toISOString()
     });
 
+    if (!result.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Progress Log Failed',
+        description: result.message,
+      });
+      return;
+    }
+
     toast({
-      title: "Progress Logged",
-      description: `${completedSteps.length} step(s) have been logged for maintenance records.`
+      title: 'Progress Logged',
+      description: `${completedSteps.length} step(s) have been logged for maintenance records.`,
     });
   };
 
@@ -161,7 +180,12 @@ export function ContextInspector({ isOpen, setIsOpen, source, keyQuote }: Contex
                     <h3 className="font-semibold text-indigo-600">{source.title}</h3>
                     <p className="text-xs text-gray-500">ID: {source.id}</p>
                   </div>
-                   <ChecklistContent content={source.content} keyQuote={keyQuote} documentId={source.id} />
+                   <ChecklistContent
+                     content={source.content}
+                     keyQuote={keyQuote}
+                     documentId={source.id}
+                     documentTitle={source.title}
+                   />
                 </div>
             </ScrollArea>
         </div>

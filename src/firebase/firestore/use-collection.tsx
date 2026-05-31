@@ -1,24 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import {
-  onSnapshot,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  endBefore,
-  limitToLast,
-  startAt,
-  endAt,
-  doc,
-  getDoc,
-  type DocumentData,
-  type Query,
-  type DocumentSnapshot,
-} from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { onSnapshot, type DocumentData, type Query, type DocumentSnapshot } from 'firebase/firestore';
 import { useFirestore } from '../provider';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
@@ -48,7 +31,7 @@ export const useCollection = <T extends DocumentData>(q: Query<T> | null) => {
       (err) => {
         console.error('onSnapshot error:', err);
         const permissionError = new FirestorePermissionError({
-            path: (q as any)._path?.canonical ?? 'unknown',
+            path: 'unknown',
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);

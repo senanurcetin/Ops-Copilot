@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, type FieldValue } from 'firebase/firestore';
 
 import type { ChatMessage as ChatMessageType, Document } from '@/lib/types';
 import { handleUserMessage } from '@/app/actions';
@@ -34,6 +34,8 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
 
   const quickActionChips = ["SF LED Error", "Motion Control 16#800D", "Duplicate IP Address", "PID Tuning"];
 
+  const createMessageTimestamp = () => serverTimestamp() as FieldValue;
+
   useEffect(() => {
     if (viewportRef.current) {
       viewportRef.current.scrollTo({
@@ -52,13 +54,13 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
     const userMessage: Omit<ChatMessageType, 'id'> = { 
       role: 'user', 
       content: question,
-      createdAt: serverTimestamp() as any
+      createdAt: createMessageTimestamp()
     };
     
     const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
     
     // Save user message (fire-and-forget with error handling)
-    addDoc(messagesCollection, userMessage).catch(async (serverError) => {
+    addDoc(messagesCollection, userMessage).catch(async () => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: `users/${user.uid}/messages`,
         operation: 'create',
@@ -81,9 +83,9 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
         content: answer, 
         sources, 
         keyQuote,
-        createdAt: serverTimestamp() as any 
+        createdAt: createMessageTimestamp()
       };
-      addDoc(messagesCollection, assistantMessage).catch(async (serverError) => {
+      addDoc(messagesCollection, assistantMessage).catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `users/${user.uid}/messages`,
           operation: 'create',
@@ -102,7 +104,7 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
       const errorMessage: Omit<ChatMessageType, 'id'> = {
         role: 'assistant',
         content: "I'm sorry, an error occurred. Please try again.",
-        createdAt: serverTimestamp() as any
+        createdAt: createMessageTimestamp()
       };
       addDoc(messagesCollection, errorMessage).catch(serverError => {
         console.error("Failed to save error message to firestore", serverError);
@@ -121,6 +123,14 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
     e.preventDefault();
     await sendMessage(input);
     setInput('');
+  };
+
+  const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      await sendMessage(input);
+      setInput('');
+    }
   };
 
   const isPending = isSending || isLoading;
@@ -155,12 +165,7 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e as any);
-                }
-              }}
+              onKeyDown={handleInputKeyDown}
               placeholder="Ask a question about your operations..."
               disabled={isPending}
               className="text-base pr-16 min-h-[48px] rounded-lg shadow-sm"

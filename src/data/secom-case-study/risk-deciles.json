@@ -1,0 +1,82 @@
+[
+  {
+    "bucket": "D1",
+    "label": "Top 10%",
+    "avg_score": 0.6287,
+    "fail_rate": 0.1562,
+    "lots": 32,
+    "failures": 5
+  },
+  {
+    "bucket": "D2",
+    "label": "11-20%",
+    "avg_score": 0.0826,
+    "fail_rate": 0.0968,
+    "lots": 31,
+    "failures": 3
+  },
+  {
+    "bucket": "D3",
+    "label": "21-30%",
+    "avg_score": 0.0169,
+    "fail_rate": 0.129,
+    "lots": 31,
+    "failures": 4
+  },
+  {
+    "bucket": "D4",
+    "label": "31-40%",
+    "avg_score": 0.0031,
+    "fail_rate": 0.0312,
+    "lots": 32,
+    "failures": 1
+  },
+  {
+    "bucket": "D5",
+    "label": "41-50%",
+    "avg_score": 0.0008,
+    "fail_rate": 0.0323,
+    "lots": 31,
+    "failures": 1
+  },
+  {
+    "bucket": "D6",
+    "label": "51-60%",
+    "avg_score": 0.0002,
+    "fail_rate": 0.0645,
+    "lots": 31,
+    "failures": 2
+  },
+  {
+    "bucket": "D7",
+    "label": "61-70%",
+    "avg_score": 0.0001,
+    "fail_rate": 0.0,
+    "lots": 32,
+    "failures": 0
+  },
+  {
+    "bucket": "D8",
+    "label": "71-80%",
+    "avg_score": 0.0,
+    "fail_rate": 0.0323,
+    "lots": 31,
+    "failures": 1
+  },
+  {
+    "bucket": "D9",
+    "label": "81-90%",
+    "avg_score": 0.0,
+    "fail_rate": 0.0,
+    "lots": 31,
+    "failures": 0
+  },
+  {
+    "bucket": "D10",
+    "label": "91-100%",
+    "avg_score": 0.0,
+    "fail_rate": 0.0,
+    "lots": 32,
+    "failures": 0
+  }
+]

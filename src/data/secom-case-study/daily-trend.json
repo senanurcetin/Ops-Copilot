@@ -1,0 +1,114 @@
+[
+  {
+    "date": "2008-10-02",
+    "avg_score": 0.1821,
+    "fail_rate": 0.1429,
+    "failures": 1,
+    "lots": 7
+  },
+  {
+    "date": "2008-10-03",
+    "avg_score": 0.0895,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 25
+  },
+  {
+    "date": "2008-10-04",
+    "avg_score": 0.042,
+    "fail_rate": 0.0556,
+    "failures": 1,
+    "lots": 18
+  },
+  {
+    "date": "2008-10-05",
+    "avg_score": 0.0144,
+    "fail_rate": 0.1875,
+    "failures": 6,
+    "lots": 32
+  },
+  {
+    "date": "2008-10-06",
+    "avg_score": 0.0752,
+    "fail_rate": 0.1042,
+    "failures": 5,
+    "lots": 48
+  },
+  {
+    "date": "2008-10-07",
+    "avg_score": 0.0986,
+    "fail_rate": 0.0357,
+    "failures": 1,
+    "lots": 28
+  },
+  {
+    "date": "2008-10-08",
+    "avg_score": 0.0614,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 26
+  },
+  {
+    "date": "2008-10-09",
+    "avg_score": 0.0106,
+    "fail_rate": 0.25,
+    "failures": 2,
+    "lots": 8
+  },
+  {
+    "date": "2008-10-10",
+    "avg_score": 0.0335,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 10
+  },
+  {
+    "date": "2008-10-11",
+    "avg_score": 0.0229,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 11
+  },
+  {
+    "date": "2008-10-12",
+    "avg_score": 0.2137,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 7
+  },
+  {
+    "date": "2008-10-13",
+    "avg_score": 0.006,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 22
+  },
+  {
+    "date": "2008-10-14",
+    "avg_score": 0.1152,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 16
+  },
+  {
+    "date": "2008-10-15",
+    "avg_score": 0.1296,
+    "fail_rate": 0.0294,
+    "failures": 1,
+    "lots": 34
+  },
+  {
+    "date": "2008-10-16",
+    "avg_score": 0.0665,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 19
+  },
+  {
+    "date": "2008-10-17",
+    "avg_score": 0.2763,
+    "fail_rate": 0.0,
+    "failures": 0,
+    "lots": 3
+  }
+]

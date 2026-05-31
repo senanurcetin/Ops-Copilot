@@ -13,25 +13,31 @@ export const useUser = () => {
 
   useEffect(() => {
     if (!auth) {
+      setLoading(false);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (userAuth) => {
-      if (userAuth) {
-        if (firestore) {
+      try {
+        if (userAuth) {
+          if (firestore) {
             const userRef = doc(firestore, `users/${userAuth.uid}`);
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) {
-              // Create user profile if it doesn't exist
               const { uid, email, displayName, photoURL } = userAuth;
               await setDoc(userRef, { uid, email, displayName, photoURL }, { merge: true });
             }
+          }
+          setUser(userAuth);
+        } else {
+          setUser(null);
         }
+      } catch (error) {
+        console.error('Failed to bootstrap Firebase user profile.', error);
         setUser(userAuth);
-      } else {
-        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

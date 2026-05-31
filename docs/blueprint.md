@@ -2,10 +2,12 @@
 
 ## Core Features:
 
-- Knowledge Ingestion: Accepts a JSON array of documents (id, title, content), generates embeddings using Gemini Pro, and stores them in Firestore.
-- Chat Agent: Accepts user questions, generates embeddings, queries Firestore for the most similar documents based on vector cosine similarity (or simulates it), constructs a prompt with retrieved context, and sends it to Gemini Pro for an answer. This feature leverages a tool to incorporate information into its output.
+- Knowledge Ingestion: Accepts a JSON array of documents (id, title, content), scopes them to the authenticated user, and stores them in a Firestore-backed knowledge collection.
+- Chat Agent: Accepts user questions, retrieves the most relevant user-scoped documents with lexical ranking, constructs a prompt with retrieved context, and sends it to Gemini Flash for an answer.
 - Chat UI: A WhatsApp-style chat interface with user bubbles on the right and AI bubbles on the left. Supports state management for chat history and loading skeletons.
-- Manual Upload: An 'Upload Manual' button that, when clicked, reads a local knowledge_base.json file and sends it to the ingest_knowledge backend endpoint.
+- Manual Upload: A 'Load Sample KB' button that reads a local knowledge_base.json file and stores it for the signed-in workspace.
+- Secure Sessions: Server-side actions are protected with Firebase-backed session cookies instead of client-only redirects.
+- Checklist Logging: Procedural checklist progress is persisted for the current operator workspace.
 
 ## Style Guidelines:
 

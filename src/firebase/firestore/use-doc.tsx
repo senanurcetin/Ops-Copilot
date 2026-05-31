@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import {
   onSnapshot,
-  doc,
   type DocumentData,
   type DocumentReference,
   type DocumentSnapshot,

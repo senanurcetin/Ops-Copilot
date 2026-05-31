@@ -1,0 +1,145 @@
+{
+  "title": "Industrial Failure-Risk Prioritization on SECOM",
+  "dataset": {
+    "name": "SECOM",
+    "source": "UCI Machine Learning Repository",
+    "task": "Binary classification for wafer-lot failure risk prioritization",
+    "total_rows": 1567,
+    "total_sensor_features": 590,
+    "failures": 104,
+    "failure_rate": 0.0664,
+    "time_range": {
+      "start": "2008-07-19",
+      "end": "2008-10-17"
+    }
+  },
+  "preprocessing": {
+    "dropped_high_missing_features": 24,
+    "kept_features": 566,
+    "missingness_rule": "Drop features above 60% missingness, median-impute the rest",
+    "split_strategy": "Chronological 80/20 holdout to emulate future-lot scoring"
+  },
+  "model": {
+    "name": "Class-weighted logistic regression",
+    "selection_reason": "Logistic regression remains the published portfolio model because it keeps coefficient-level interpretability for stakeholder review while remaining competitive with the higher-capacity random forest benchmark on the same chronological holdout.",
+    "threshold_free_metrics": {
+      "roc_auc": 0.7659,
+      "pr_auc": 0.1745
+    },
+    "test_set": {
+      "rows": 314,
+      "failures": 17,
+      "failure_rate": 0.0541
+    },
+    "benchmarks": [
+      {
+        "model_key": "naive_baseline",
+        "name": "Naive prior baseline",
+        "short_name": "Naive Baseline",
+        "description": "Dummy classifier that predicts the historical class prior.",
+        "roc_auc": 0.5,
+        "pr_auc": 0.0541,
+        "top_review_budget_pct": 10.0,
+        "top_review_precision": 0.0,
+        "top_review_recall": 0.0,
+        "top_review_lift": 0.0
+      },
+      {
+        "model_key": "logistic_regression",
+        "name": "Class-weighted logistic regression",
+        "short_name": "Logistic Regression",
+        "description": "Interpretable linear baseline with class balancing and coefficient-level visibility.",
+        "roc_auc": 0.7659,
+        "pr_auc": 0.1745,
+        "top_review_budget_pct": 10.0,
+        "top_review_precision": 0.1562,
+        "top_review_recall": 0.2941,
+        "top_review_lift": 2.89
+      },
+      {
+        "model_key": "random_forest",
+        "name": "Balanced random forest",
+        "short_name": "Random Forest",
+        "description": "Higher-capacity tree ensemble benchmark for non-linear sensor interactions.",
+        "roc_auc": 0.5195,
+        "pr_auc": 0.0688,
+        "top_review_budget_pct": 10.0,
+        "top_review_precision": 0.0625,
+        "top_review_recall": 0.1176,
+        "top_review_lift": 1.15
+      }
+    ]
+  },
+  "review_budgets": [
+    {
+      "review_budget_pct": 5.0,
+      "lots_reviewed": 16,
+      "captured_failures": 4,
+      "precision": 0.25,
+      "recall": 0.2353,
+      "f1": 0.2424,
+      "specificity": 0.9596,
+      "balanced_accuracy": 0.5974,
+      "lift_vs_random": 4.62,
+      "confusion_matrix": {
+        "true_negative": 285,
+        "false_positive": 12,
+        "false_negative": 13,
+        "true_positive": 4
+      }
+    },
+    {
+      "review_budget_pct": 10.0,
+      "lots_reviewed": 32,
+      "captured_failures": 5,
+      "precision": 0.1562,
+      "recall": 0.2941,
+      "f1": 0.2041,
+      "specificity": 0.9091,
+      "balanced_accuracy": 0.6016,
+      "lift_vs_random": 2.89,
+      "confusion_matrix": {
+        "true_negative": 270,
+        "false_positive": 27,
+        "false_negative": 12,
+        "true_positive": 5
+      }
+    },
+    {
+      "review_budget_pct": 20.0,
+      "lots_reviewed": 63,
+      "captured_failures": 8,
+      "precision": 0.127,
+      "recall": 0.4706,
+      "f1": 0.2,
+      "specificity": 0.8148,
+      "balanced_accuracy": 0.6427,
+      "lift_vs_random": 2.35,
+      "confusion_matrix": {
+        "true_negative": 242,
+        "false_positive": 55,
+        "false_negative": 9,
+        "true_positive": 8
+      }
+    }
+  ],
+  "portfolio_summary": {
+    "problem_statement": "Prioritize limited engineering review capacity toward the lots most likely to fail.",
+    "why_ranking_not_threshold": "The plant only has capacity to review a small share of lots per shift, so risk ranking is more realistic than a fixed 0.50 classifier threshold.",
+    "headline_result": "At a 10% review budget, the model surfaces 29.4% of failures with 2.89x the failure yield of random review."
+  },
+  "experiment_log": [
+    {
+      "step": "Naive baseline",
+      "takeaway": "The dummy prior model establishes a floor at ROC-AUC 0.500 and PR-AUC 0.054, confirming that class imbalance alone does not solve the ranking problem."
+    },
+    {
+      "step": "Interpretable linear model",
+      "takeaway": "Class-weighted logistic regression lifts PR-AUC to 0.174 and keeps the strongest coefficient signals inspectable for operations stakeholders."
+    },
+    {
+      "step": "Higher-capacity tree benchmark",
+      "takeaway": "Random forest was tested as a non-linear benchmark and reached PR-AUC 0.069; the published portfolio model stays logistic to preserve simpler explanation surfaces and coefficient visibility."
+    }
+  ]
+}

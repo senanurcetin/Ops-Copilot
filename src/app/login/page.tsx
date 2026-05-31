@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
@@ -24,14 +25,59 @@ export default function LoginPage() {
     const auth = useAuth();
     const { user, loading } = useUser();
     const router = useRouter();
-    const [isSigningIn, setIsSigningIn] = useState(false); // To handle button loading state
+    const [isSigningIn, setIsSigningIn] = useState(false);
+    const [isSyncingSession, setIsSyncingSession] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
-        if (!loading && user) {
-            router.push('/');
+        if (loading || !user || isSyncingSession) {
+            return;
         }
-    }, [user, loading, router]);
+
+        let cancelled = false;
+
+        const syncSession = async () => {
+            setIsSyncingSession(true);
+            try {
+                const idToken = await user.getIdToken();
+                const response = await fetch('/api/auth/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ idToken }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not create a server session.');
+                }
+
+                if (!cancelled) {
+                    router.replace('/');
+                }
+            } catch (error) {
+                console.error('Error syncing server session:', error);
+                if (!cancelled) {
+                    if (auth) {
+                        await auth.signOut();
+                    }
+                    toast({
+                        variant: 'destructive',
+                        title: 'Session Sync Failed',
+                        description: 'Sign-in succeeded, but the secure server session could not be created.',
+                    });
+                    setIsSigningIn(false);
+                    setIsSyncingSession(false);
+                }
+            }
+        };
+
+        void syncSession();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [auth, user, loading, isSyncingSession, router, toast]);
 
     const handleGoogleSignIn = async () => {
         if (!auth || isSigningIn) return;
@@ -39,19 +85,19 @@ export default function LoginPage() {
         setIsSigningIn(true);
         try {
             await signInWithPopup(auth, provider);
-            // The router.push is handled by the useEffect above
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Could not sign in with Google. Please try again.';
             console.error('Error during Google sign-in:', error);
             toast({
                 variant: 'destructive',
                 title: 'Sign-In Failed',
-                description: error.message || 'Could not sign in with Google. Please try again.',
+                description: message,
             });
             setIsSigningIn(false); // Allow user to try again on error
         }
     };
 
-    if (loading || user) {
+    if (loading || user || isSigningIn || isSyncingSession) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-slate-100">
                 <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
@@ -67,16 +113,21 @@ export default function LoginPage() {
                         <Bot className="h-8 w-8 text-white" />
                     </div>
                     <CardTitle className="text-2xl">Welcome to Ops-Copilot</CardTitle>
-                    <CardDescription>Sign in to access your dashboard</CardDescription>
+                    <CardDescription>
+                        Sign in to access the operator dashboard, or review the public industrial data science case study.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
                     <Button onClick={handleGoogleSignIn} className="w-full" variant="outline" disabled={isSigningIn || !auth}>
-                         {isSigningIn ? (
+                         {isSigningIn || isSyncingSession ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                          ) : (
                             <GoogleIcon />
                          )}
-                        {isSigningIn ? 'Signing In...' : 'Sign in with Google'}
+                        {isSigningIn || isSyncingSession ? 'Signing In...' : 'Sign in with Google'}
+                    </Button>
+                    <Button asChild className="w-full" variant="ghost">
+                        <Link href="/case-study">View public case study</Link>
                     </Button>
                 </CardContent>
             </Card>

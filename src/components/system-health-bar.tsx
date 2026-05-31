@@ -1,6 +1,6 @@
 'use client';
 
-import { ShieldCheck, Database, GitBranch, Circle } from 'lucide-react';
+import { ShieldCheck, Database, FolderKanban, Circle } from 'lucide-react';
 
 export function SystemHealthBar() {
   return (
@@ -10,19 +10,19 @@ export function SystemHealthBar() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-slate-500" />
             <span>AI Model:</span>
-            <span className="font-semibold text-slate-800">Gemini Pro</span>
+            <span className="font-semibold text-slate-800">Gemini 2.5 Flash</span>
             <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
-            <span className="text-emerald-500 font-semibold">Active</span>
+            <span className="text-emerald-500 font-semibold">Configured</span>
           </div>
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-slate-500" />
-            <span>DB Latency:</span>
-            <span className="font-semibold text-slate-800">120ms</span>
+            <span>Knowledge Store:</span>
+            <span className="font-semibold text-slate-800">Firestore-backed</span>
           </div>
           <div className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-slate-500" />
-            <span>KB Version:</span>
-            <span className="font-semibold text-slate-800">v1.0.4</span>
+            <FolderKanban className="h-4 w-4 text-slate-500" />
+            <span>Workspace Scope:</span>
+            <span className="font-semibold text-slate-800">Per-user sample KB</span>
           </div>
         </div>
       </div>

@@ -1,0 +1,38 @@
+[
+  {
+    "model_key": "naive_baseline",
+    "name": "Naive prior baseline",
+    "short_name": "Naive Baseline",
+    "description": "Dummy classifier that predicts the historical class prior.",
+    "roc_auc": 0.5,
+    "pr_auc": 0.0541,
+    "top_review_budget_pct": 10.0,
+    "top_review_precision": 0.0,
+    "top_review_recall": 0.0,
+    "top_review_lift": 0.0
+  },
+  {
+    "model_key": "logistic_regression",
+    "name": "Class-weighted logistic regression",
+    "short_name": "Logistic Regression",
+    "description": "Interpretable linear baseline with class balancing and coefficient-level visibility.",
+    "roc_auc": 0.7659,
+    "pr_auc": 0.1745,
+    "top_review_budget_pct": 10.0,
+    "top_review_precision": 0.1562,
+    "top_review_recall": 0.2941,
+    "top_review_lift": 2.89
+  },
+  {
+    "model_key": "random_forest",
+    "name": "Balanced random forest",
+    "short_name": "Random Forest",
+    "description": "Higher-capacity tree ensemble benchmark for non-linear sensor interactions.",
+    "roc_auc": 0.5195,
+    "pr_auc": 0.0688,
+    "top_review_budget_pct": 10.0,
+    "top_review_precision": 0.0625,
+    "top_review_recall": 0.1176,
+    "top_review_lift": 1.15
+  }
+]
