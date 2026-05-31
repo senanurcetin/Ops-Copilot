@@ -7,7 +7,7 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('button:has-text("Sign in")')).toBeVisible();
   });
 
-  test('should navigate to dashboard after login', async ({ page, context }) => {
+  test('should navigate to dashboard after login', async ({ page }) => {
     // This test assumes you have test user credentials set up
     await page.goto('/login');
     await page.fill('input[type="email"]', 'test@example.com');
