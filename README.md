@@ -10,6 +10,10 @@ Portfolio case study: [senanur-cetin.vercel.app/projects/ops-copilot](https://se
 
 In-app case study route: `/case-study` after running the app locally
 
+Short video demo: [`docs/assets/ops-copilot-case-study.webm`](docs/assets/ops-copilot-case-study.webm)
+
+![Ops-Copilot case study surface](docs/assets/ops-copilot-case-study.png)
+
 GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 
 Hiring summary: [`docs/hiring-summary.md`](docs/hiring-summary.md)
