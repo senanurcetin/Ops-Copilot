@@ -1,0 +1,50 @@
+{
+  "n_splits": 5,
+  "model_key": "logistic_regression",
+  "folds": [
+    {
+      "fold": 1,
+      "train_size": 262,
+      "val_size": 261,
+      "val_failures": 22,
+      "roc_auc": 0.5753,
+      "pr_auc": 0.1019
+    },
+    {
+      "fold": 2,
+      "train_size": 523,
+      "val_size": 261,
+      "val_failures": 6,
+      "roc_auc": 0.6111,
+      "pr_auc": 0.1706
+    },
+    {
+      "fold": 3,
+      "train_size": 784,
+      "val_size": 261,
+      "val_failures": 10,
+      "roc_auc": 0.704,
+      "pr_auc": 0.0676
+    },
+    {
+      "fold": 4,
+      "train_size": 1045,
+      "val_size": 261,
+      "val_failures": 13,
+      "roc_auc": 0.4519,
+      "pr_auc": 0.0467
+    },
+    {
+      "fold": 5,
+      "train_size": 1306,
+      "val_size": 261,
+      "val_failures": 14,
+      "roc_auc": 0.7886,
+      "pr_auc": 0.2325
+    }
+  ],
+  "mean_roc_auc": 0.6262,
+  "std_roc_auc": 0.1146,
+  "mean_pr_auc": 0.1239,
+  "interpretation": "Mean ROC-AUC across 5 CV folds: 0.6262 \u00b1 0.1146. Stable AUC across folds indicates low temporal drift risk. Declining AUC in later folds suggests process drift and the need for more frequent retraining."
+}

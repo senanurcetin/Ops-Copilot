@@ -1,0 +1,89 @@
+{
+  "top_features_by_f_statistic": [
+    {
+      "feature": "Attribute 60",
+      "f_statistic": 38.0397
+    },
+    {
+      "feature": "Attribute 104",
+      "f_statistic": 20.912
+    },
+    {
+      "feature": "Attribute 432",
+      "f_statistic": 20.8643
+    },
+    {
+      "feature": "Attribute 511",
+      "f_statistic": 18.8464
+    },
+    {
+      "feature": "Attribute 431",
+      "f_statistic": 18.1372
+    },
+    {
+      "feature": "Attribute 435",
+      "f_statistic": 17.5749
+    },
+    {
+      "feature": "Attribute 22",
+      "f_statistic": 17.4243
+    },
+    {
+      "feature": "Attribute 436",
+      "f_statistic": 17.1067
+    },
+    {
+      "feature": "Attribute 437",
+      "f_statistic": 17.0142
+    },
+    {
+      "feature": "Attribute 130",
+      "f_statistic": 14.7453
+    },
+    {
+      "feature": "Attribute 29",
+      "f_statistic": 13.6657
+    },
+    {
+      "feature": "Attribute 299",
+      "f_statistic": 13.4715
+    },
+    {
+      "feature": "Attribute 164",
+      "f_statistic": 12.9792
+    },
+    {
+      "feature": "Attribute 296",
+      "f_statistic": 11.9677
+    },
+    {
+      "feature": "Attribute 349",
+      "f_statistic": 11.8081
+    },
+    {
+      "feature": "Attribute 166",
+      "f_statistic": 11.8015
+    },
+    {
+      "feature": "Attribute 301",
+      "f_statistic": 11.5537
+    },
+    {
+      "feature": "Attribute 300",
+      "f_statistic": 11.2828
+    },
+    {
+      "feature": "Attribute 165",
+      "f_statistic": 11.225
+    },
+    {
+      "feature": "Attribute 80",
+      "f_statistic": 11.1942
+    }
+  ],
+  "collinearity_analysis": {
+    "pairs_with_r_above_0_95": 15,
+    "total_pairs_checked": 190,
+    "note": "15 highly correlated feature pairs (|r| > 0.95) found among the top-20 features. High collinearity in logistic regression can inflate coefficient variances; regularization and SelectKBest mitigate this."
+  }
+}

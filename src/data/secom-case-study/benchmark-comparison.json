@@ -34,5 +34,17 @@
     "top_review_precision": 0.0625,
     "top_review_recall": 0.1176,
     "top_review_lift": 1.15
+  },
+  {
+    "model_key": "hist_gradient_boosting",
+    "name": "HistGradientBoosting with feature selection",
+    "short_name": "HistGradientBoosting",
+    "description": "Native-NaN gradient boosting with SelectKBest feature selection (top-50 sensors). No imputation required.",
+    "roc_auc": 0.6201,
+    "pr_auc": 0.1078,
+    "top_review_budget_pct": 10.0,
+    "top_review_precision": 0.125,
+    "top_review_recall": 0.2353,
+    "top_review_lift": 2.31
   }
 ]

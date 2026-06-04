@@ -1,0 +1,57 @@
+{
+  "n_bins": 10,
+  "expected_calibration_error": 0.0755,
+  "reliability_diagram": [
+    {
+      "predicted_probability_bin": 0.0,
+      "actual_failure_rate": 0.0,
+      "calibration_gap": -0.0
+    },
+    {
+      "predicted_probability_bin": 0.0,
+      "actual_failure_rate": 0.0,
+      "calibration_gap": -0.0
+    },
+    {
+      "predicted_probability_bin": 0.0,
+      "actual_failure_rate": 0.0323,
+      "calibration_gap": 0.0322
+    },
+    {
+      "predicted_probability_bin": 0.0001,
+      "actual_failure_rate": 0.0,
+      "calibration_gap": -0.0001
+    },
+    {
+      "predicted_probability_bin": 0.0002,
+      "actual_failure_rate": 0.0645,
+      "calibration_gap": 0.0643
+    },
+    {
+      "predicted_probability_bin": 0.0008,
+      "actual_failure_rate": 0.0323,
+      "calibration_gap": 0.0315
+    },
+    {
+      "predicted_probability_bin": 0.0031,
+      "actual_failure_rate": 0.0312,
+      "calibration_gap": 0.0282
+    },
+    {
+      "predicted_probability_bin": 0.0169,
+      "actual_failure_rate": 0.129,
+      "calibration_gap": 0.1122
+    },
+    {
+      "predicted_probability_bin": 0.0826,
+      "actual_failure_rate": 0.0968,
+      "calibration_gap": 0.0142
+    },
+    {
+      "predicted_probability_bin": 0.6287,
+      "actual_failure_rate": 0.1562,
+      "calibration_gap": -0.4725
+    }
+  ],
+  "interpretation": "ECE = 0.0755. Lower ECE = better calibration. Values below 0.05 indicate the model's predicted probabilities match observed failure rates."
+}
