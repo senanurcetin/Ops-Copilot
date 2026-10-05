@@ -18,7 +18,7 @@ GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 
 Hiring summary: [`docs/hiring-summary.md`](docs/hiring-summary.md)
 
-Portfolio role: `flagship case study`
+Portfolio role: `archive case study`
 
 ## Why this project exists
 
