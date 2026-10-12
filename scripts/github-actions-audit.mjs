@@ -20,6 +20,50 @@ export function validateRepository(value) {
   return [owner, name];
 }
 
+
+/** Require a real calendar day. The API interprets the date in UTC. */
+export function validateSinceDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error('--since must use YYYY-MM-DD (UTC).');
+  }
+  const date = new Date(value + 'T00:00:00.000Z');
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    throw new Error('--since must be a valid calendar date.');
+  }
+  return value;
+}
+
+/** Escape untrusted workflow names before they appear in a Markdown table. */
+function escapeMarkdown(value) {
+  return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;').replaceAll('|', '\\|')
+    .replace(/\r?\n/g, ' ').replaceAll('\r', ' ');
+}
+
+export function renderMarkdownReport(report) {
+  const rows = [
+    '# GitHub Actions report: ' + escapeMarkdown(report.repository),
+    '',
+    '- Recent runs inspected: **' + report.inspected_runs + '**',
+    '- Completed jobs: **' + report.completed_jobs + '**',
+    '- Elapsed job-minutes in this sample: **' + report.elapsed_job_minutes + '**',
+    ...(report.since ? ['- Created since (UTC): **' + report.since + '**'] : []),
+    '',
+    '> ' + report.metric_note,
+    '',
+    '| Workflow | Runs | Failures | Scheduled | Elapsed job-minutes |',
+    '| --- | ---: | ---: | ---: | ---: |',
+    ...report.workflows.map(w => '| ' + escapeMarkdown(w.name) + ' | ' + w.runs +
+      ' | ' + w.failures + ' | ' + w.scheduled + ' | ' + w.elapsed_job_minutes + ' |'),
+    '',
+  ];
+  if (report.sample_warning) rows.push('**Sampling limitation:** ' + escapeMarkdown(report.sample_warning), '');
+  rows.push('## Suggested reviews', '');
+  if (report.recommendations.length === 0) rows.push('No heuristic review flags within this sample.');
+  else rows.push(...report.recommendations.map(message => '- ' + escapeMarkdown(message)));
+  return rows.join('\n') + '\n';
+}
+
 export function jobDurationMinutes(job) {
   if (!job?.started_at || !job?.completed_at) return 0;
   const start = Date.parse(job.started_at);
@@ -106,13 +150,14 @@ async function getJson(path, token, fetchImpl) {
   return response.json();
 }
 
-export async function auditRepository({ repository, token, limit = 30, fetchImpl = fetch }) {
+export async function auditRepository({ repository, token, limit = 30, since, fetchImpl = fetch }) {
   const [owner, repo] = validateRepository(repository);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be an integer from 1 to 100.');
   }
-  const prefix = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
-  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1`, token, fetchImpl);
+  const prefix = \`/repos/\${encodeURIComponent(owner)}/\${encodeURIComponent(repo)}\`;
+  const dateFilter = since ? '&created=' + encodeURIComponent('>=' + validateSinceDate(since)) : '';
+  const runsResult = await getJson(\`\${prefix}/actions/runs?per_page=\${limit}&page=1\${dateFilter}\`, token, fetchImpl);
   const runs = Array.isArray(runsResult.workflow_runs) ? runsResult.workflow_runs.slice(0, limit) : [];
   const jobsByRun = new Map();
   let truncated = false;
@@ -132,6 +177,7 @@ export async function auditRepository({ repository, token, limit = 30, fetchImpl
   }
   return {
     ...summarizeRuns(repository, runs, jobsByRun),
+    ...(since ? { since } : {}),
     sample_warning: truncated
       ? 'Some runs contain more than 500 jobs; sampled job durations are incomplete.'
       : runs.length === limit
@@ -142,7 +188,7 @@ export async function auditRepository({ repository, token, limit = 30, fetchImpl
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--json]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--json | --markdown]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -154,9 +200,13 @@ export function parseArgs(args) {
   let repository;
   let limit = 30;
   let json = false;
+  let markdown = false;
+  let since;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--json') json = true;
+    else if (arg === '--markdown') markdown = true;
+    else if (arg === '--since') since = validateSinceDate(args[++i]);
     else if (arg === '--limit') {
       if (!/^\d+$/.test(args[i + 1] || '')) throw new Error('--limit requires a positive integer.');
       limit = Number(args[++i]);
@@ -166,7 +216,8 @@ export function parseArgs(args) {
   if (!repository) throw new Error('Missing owner/repo.');
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
-  return { repository, limit, json };
+  if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
+  return { repository, limit, json, ...(since ? { since } : {}), ...(markdown ? { markdown } : {}) };
 }
 
 async function main() {
@@ -176,12 +227,15 @@ async function main() {
     const data = await auditRepository({
       repository: options.repository,
       limit: options.limit,
+      since: options.since,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
     if (options.json) return console.log(JSON.stringify(data, null, 2));
+    if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
     console.log(`# GitHub Actions audit: ${data.repository}`);
     console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     console.log(`NOTE: ${data.metric_note}`);
+    if (data.since) console.log(`Created since (UTC): ${data.since}`);
     for (const w of data.workflows) {
       console.log(`- ${w.name}: ${w.runs} runs, ${w.failures} failures, ${w.elapsed_job_minutes} elapsed job-minutes`);
     }
