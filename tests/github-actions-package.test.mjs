@@ -22,7 +22,7 @@ test('standalone package includes only two working CLI bins, documentation and l
     const manifest = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'));
     assert.equal(manifest.name, '@senanurcetin/github-actions-auditor');
     assert.equal(manifest.version, '0.1.0');
-    assert.match(await readFile(join(destination, 'CHANGELOG.md'), 'utf8'), /\\[0\\.1\\.0\\]/);
+    assert.match(await readFile(join(destination, 'CHANGELOG.md'), 'utf8'), /\[0\.1\.0\]/);
     assert.equal(manifest.license, 'MIT');
     assert.equal(Object.keys(manifest.dependencies || {}).length, 0);
     assert.equal(manifest.bin['github-actions-audit'], './bin/github-actions-audit.mjs');
