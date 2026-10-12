@@ -6,7 +6,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/server/firebase-admin';
 import { rankDocuments } from './document-ranking';
-import { planKnowledgeBaseReplacement, type KnowledgeDocument } from '@/server/sample-knowledge-base';
+import { applyKnowledgeBaseReplacement, type KnowledgeDocument } from '@/server/sample-knowledge-base';
 
 export interface Document {
   id: string;
@@ -71,21 +71,21 @@ export async function replaceSampleDocuments(
 
   await db.runTransaction(async transaction => {
     const existing = await transaction.get(collection);
-    const { obsoleteIds } = planKnowledgeBaseReplacement(
-      existing.docs.map(doc => doc.id), documents,
+    applyKnowledgeBaseReplacement(
+      existing.docs.map(doc => doc.id),
+      documents,
+      {
+        deleteById: id => { transaction.delete(collection.doc(id)); },
+        setDocument: doc => {
+          transaction.set(collection.doc(doc.id), {
+            id: doc.id,
+            title: doc.title,
+            content: doc.content,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        },
+      },
     );
-
-    for (const id of obsoleteIds) {
-      transaction.delete(collection.doc(id));
-    }
-    for (const doc of documents) {
-      transaction.set(collection.doc(doc.id), {
-        id: doc.id,
-        title: doc.title,
-        content: doc.content,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
   });
 }
 
