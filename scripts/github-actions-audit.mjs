@@ -33,6 +33,28 @@ export function validateSinceDate(value) {
   return value;
 }
 
+/** Validate either boundary and reject reversed inclusive UTC date ranges. */
+export function validateDateRange({ since, until }) {
+  if (since !== undefined) validateSinceDate(since);
+  if (until !== undefined) {
+    try { validateSinceDate(until); }
+    catch { throw new Error('--until must be a valid YYYY-MM-DD calendar date (UTC).'); }
+  }
+  if (since && until && since > until) {
+    throw new Error('--since must not be later than --until.');
+  }
+  return { ...(since ? { since } : {}), ...(until ? { until } : {}) };
+}
+
+/** Build GitHub REST date search syntax; both boundary dates are inclusive. */
+export function createdDateFilter({ since, until }) {
+  validateDateRange({ since, until });
+  if (since && until) return since + '..' + until;
+  if (since) return '>=' + since;
+  if (until) return '<=' + until;
+  return null;
+}
+
 /** Check CLI branch values before encoding them into a GitHub API query. */
 export function validateBranch(value) {
   if (typeof value !== 'string' || !value || value.length > 255 ||
@@ -58,6 +80,7 @@ export function renderMarkdownReport(report) {
     '- Jobs without valid completed timestamps: **' + report.incomplete_jobs + '**',
     '- Elapsed job-minutes in this sample: **' + report.elapsed_job_minutes + '**',
     ...(report.since ? ['- Created since (UTC): **' + report.since + '**'] : []),
+    ...(report.until ? ['- Created until (UTC): **' + report.until + '**'] : []),
     ...(report.branch ? ['- Branch: **' + escapeMarkdown(report.branch) + '**'] : []),
     '',
     '> ' + report.metric_note,
@@ -180,15 +203,16 @@ async function getJson(path, token, fetchImpl) {
   }
 }
 
-export async function auditRepository({ repository, token, limit = 30, since, branch, fetchImpl = fetch }) {
+export async function auditRepository({ repository, token, limit = 30, since, until, branch, fetchImpl = fetch }) {
   const [owner, repo] = validateRepository(repository);
-  if (since !== undefined) validateSinceDate(since);
+  validateDateRange({ since, until });
   if (branch !== undefined) validateBranch(branch);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be an integer from 1 to 100.');
   }
   const prefix = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
-  const dateFilter = since ? '&created=' + encodeURIComponent('>=' + since) : '';
+  const dateValue = createdDateFilter({ since, until });
+  const dateFilter = dateValue ? '&created=' + encodeURIComponent(dateValue) : '';
   const branchFilter = branch ? '&branch=' + encodeURIComponent(branch) : '';
   const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}${branchFilter}`, token, fetchImpl);
   if (!runsResult || !Array.isArray(runsResult.workflow_runs)) {
@@ -223,6 +247,7 @@ export async function auditRepository({ repository, token, limit = 30, since, br
   return {
     ...summarizeRuns(repository, runs, jobsByRun),
     ...(since ? { since } : {}),
+    ...(until ? { until } : {}),
     ...(branch ? { branch } : {}),
     sample_warning: [
       ...(truncated ? ['Some runs contain more than 500 jobs; sampled job durations are incomplete.'] : []),
@@ -233,7 +258,7 @@ export async function auditRepository({ repository, token, limit = 30, since, br
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--branch REF] [--json | --markdown]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--json | --markdown]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -247,12 +272,14 @@ export function parseArgs(args) {
   let json = false;
   let markdown = false;
   let since;
+  let until;
   let branch;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
+    else if (arg === '--until') until = validateDateRange({ until: args[++i] }).until;
     else if (arg === '--branch') branch = validateBranch(args[++i]);
     else if (arg === '--limit') {
       if (!/^\d+$/.test(args[i + 1] || '')) throw new Error('--limit requires a positive integer.');
@@ -264,7 +291,8 @@ export function parseArgs(args) {
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
   if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
-  return { repository, limit, json, ...(since ? { since } : {}), ...(branch ? { branch } : {}), ...(markdown ? { markdown } : {}) };
+  validateDateRange({ since, until });
+  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(markdown ? { markdown } : {}) };
 }
 
 async function main() {
@@ -275,6 +303,7 @@ async function main() {
       repository: options.repository,
       limit: options.limit,
       since: options.since,
+      until: options.until,
       branch: options.branch,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
@@ -284,6 +313,7 @@ async function main() {
     console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     console.log(`NOTE: ${data.metric_note}`);
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
+    if (data.until) console.log(`Created until (UTC): ${data.until}`);
     if (data.branch) console.log(`Branch: ${data.branch}`);
     for (const w of data.workflows) {
       const workflowLabel = w.name + (w.workflow_id ? ' (#' + w.workflow_id + ')' : '');
