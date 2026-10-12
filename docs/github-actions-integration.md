@@ -64,6 +64,13 @@ npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 - Same `--since YYYY-MM-DD` UTC lower bound applies to each repository. `--branch` is deliberately not available on the cross-repository command, because different repos may use different default branches; compare their unfiltered runs instead or use the single-repo auditor with explicit branches.
 - Sorting only makes the sample easier to read. Comparing observed job-minutes across repositories is **not a normalized efficiency score, budget total, or spend ranking**: workflows, activity levels, job complexity and sample truncation differ.
 
+## REST reliability and request efficiency
+
+- The command retries an idempotent GitHub **GET** request at most twice for short transient `429`, `502`, `503` or `504` responses. If GitHub provides a short numeric `Retry-After` (up to 3 seconds), it is respected. Long rate-limit windows are reported immediately rather than issuing more requests. Authentication failures (`401`, permission-denied `403`) are not blindly retried.
+- For **anonymous public repository requests only**, a process-local cache can reuse successful GitHub API responses for 30 seconds, with a maximum of 100 entries. Expired entries are ignored; cached data is defensively copied. **Authenticated requests are never cached** in this shared cache, to prevent private-token response mixing.
+- The public web Explorer also uses server-side cache revalidation; it does not store installation tokens.
+- This is not persistent caching across separate CLI processes, and it does not change or consume GitHub Actions runner quotas. Never interpret sampled job durations as billed minutes.
+
 ## Report semantics and limits
 
 - `elapsed_job_minutes` is the sum of `completed_at - started_at` for sampled jobs, rounded to one decimal.
