@@ -65,3 +65,21 @@ export function planKnowledgeBaseReplacement(
   }
   return { obsoleteIds, writeCount };
 }
+
+
+// A small, Firestore-free write adapter. Keeping the write plan here lets unit
+// tests exercise the same fail-before-mutation sequence used in production.
+export interface KnowledgeBaseReplacementWrites {
+  deleteById(id: string): void;
+  setDocument(document: KnowledgeDocument): void;
+}
+
+export function applyKnowledgeBaseReplacement(
+  existingIds: readonly string[],
+  incoming: readonly KnowledgeDocument[],
+  writes: KnowledgeBaseReplacementWrites,
+): void {
+  const { obsoleteIds } = planKnowledgeBaseReplacement(existingIds, incoming);
+  for (const id of obsoleteIds) writes.deleteById(id);
+  for (const document of incoming) writes.setDocument(document);
+}

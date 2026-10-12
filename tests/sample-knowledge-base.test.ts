@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   FIRESTORE_BATCH_WRITE_LIMIT,
+  applyKnowledgeBaseReplacement,
   parseSampleKnowledgeBase,
   planKnowledgeBaseReplacement,
 } from '../src/server/sample-knowledge-base';
@@ -93,22 +94,51 @@ test('retry planning uses the latest transaction snapshot, not a stale deletion 
   assert.deepEqual(retry.writeCount, 3);
 });
 
-test('sample replacement reads and plans inside Firestore transaction before writing', () => {
+test('atomic adapter schedules obsolete deletes before incoming sets', () => {
+  const actions: string[] = [];
+  applyKnowledgeBaseReplacement(['a', 'obsolete', 'b'], documents, {
+    deleteById: id => { actions.push('delete:' + id); },
+    setDocument: doc => { actions.push('set:' + doc.id); },
+  });
+  assert.deepEqual(actions, ['delete:obsolete', 'set:a', 'set:b']);
+});
+
+test('atomic adapter does not mutate on empty, duplicate, or over-budget plans', () => {
+  const actions: string[] = [];
+  const writes = {
+    deleteById: (id: string) => { actions.push('delete:' + id); },
+    setDocument: (doc: { id: string }) => { actions.push('set:' + doc.id); },
+  };
+  assert.throws(() => applyKnowledgeBaseReplacement(['a'], [], writes), /empty/);
+  assert.throws(() => applyKnowledgeBaseReplacement(['a'], [documents[0], documents[0]], writes), /Duplicate/);
+  const ids = Array.from({ length: FIRESTORE_BATCH_WRITE_LIMIT }, (_, i) => 'old-' + i);
+  assert.throws(() => applyKnowledgeBaseReplacement(ids, documents, writes), /batch limit/);
+  assert.deepEqual(actions, [], 'No write may be scheduled if the plan fails validation');
+});
+
+test('atomic adapter uses the snapshot provided for each retry attempt', () => {
+  const run = (ids: string[]) => {
+    const actions: string[] = [];
+    applyKnowledgeBaseReplacement(ids, documents, {
+      deleteById: id => { actions.push('delete:' + id); },
+      setDocument: doc => { actions.push('set:' + doc.id); },
+    });
+    return actions;
+  };
+  assert.deepEqual(run(['a', 'old']), ['delete:old', 'set:a', 'set:b']);
+  assert.deepEqual(run(['a', 'concurrent']), ['delete:concurrent', 'set:a', 'set:b']);
+});
+
+test('sample replacement reads its Firestore snapshot before scheduling mutations', () => {
   const code = readFileSync(new URL('../src/services/vector-store.ts', import.meta.url), 'utf8');
   const fn = code.split('export async function replaceSampleDocuments(')[1]
     ?.split('export async function searchDocuments(')[0];
   assert.ok(fn, 'Expected sample replacement helper');
   assert.match(fn, /await db\.runTransaction\(async transaction =>/);
   assert.match(fn, /await transaction\.get\(collection\)/);
-  assert.match(fn, /planKnowledgeBaseReplacement\(/);
+  assert.match(fn, /applyKnowledgeBaseReplacement\(/);
   assert.match(fn, /transaction\.delete\(/);
   assert.match(fn, /transaction\.set\(/);
   assert.doesNotMatch(fn, /await collection\.get\(|batch\.commit\(/);
-
-  const read = fn.indexOf('await transaction.get(collection)');
-  const plan = fn.indexOf('planKnowledgeBaseReplacement(');
-  const remove = fn.indexOf('transaction.delete(');
-  const put = fn.indexOf('transaction.set(');
-  assert.ok(read >= 0 && read < plan && plan < remove && remove < put,
-    'Transaction must read and validate all changes before any mutations');
+  assert.ok(fn.indexOf('await transaction.get(collection)') < fn.indexOf('applyKnowledgeBaseReplacement('));
 });
