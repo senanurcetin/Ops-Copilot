@@ -1,8 +1,8 @@
 'use server';
 
 import { obtainAnswersFromDocuments } from '@/ai/flows/obtain-answers-from-documents';
-import { ingestKnowledge, type IngestKnowledgeInput } from '@/ai/flows/initial-knowledge-base-setup';
-import { searchDocuments, clearDocuments, getKnowledgeBaseStats, type Document } from '@/services/vector-store';
+import { searchDocuments, replaceSampleDocuments, getKnowledgeBaseStats, type Document } from '@/services/vector-store';
+import { parseSampleKnowledgeBase } from '@/server/sample-knowledge-base';
 import { SessionAuthError, requireCurrentSessionUser } from '@/server/auth-session';
 import { getAdminDb } from '@/server/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -64,16 +64,14 @@ export async function handleUserMessage(question: string, chatHistory: ChatHisto
 export async function handleUploadManual(): Promise<{ success: boolean; message: string }> {
   try {
     const sessionUser = await requireCurrentSessionUser();
-    await clearDocuments(sessionUser.uid);
-
+    // Read and validate the entire fixture before any Firestore mutation.
     const filePath = path.join(process.cwd(), 'public', 'knowledge_base.json');
     const fileContent = await fs.readFile(filePath, 'utf-8');
-    const knowledgeBase = JSON.parse(fileContent) as IngestKnowledgeInput['documents'];
-    
-    await ingestKnowledge({
-      userId: sessionUser.uid,
-      documents: knowledgeBase,
-    });
+    const knowledgeBase = parseSampleKnowledgeBase(fileContent);
+
+    // One Firestore batch replaces the sample set atomically. On failure the
+    // previous documents remain untouched; the response reports failure.
+    await replaceSampleDocuments(sessionUser.uid, knowledgeBase);
     
     return { success: true, message: 'Knowledge base ingested successfully!' };
   } catch (error) {
