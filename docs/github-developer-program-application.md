@@ -40,6 +40,7 @@ These are **not** the separate GitHub Marketplace listing criteria, paid-app ins
 2. Open the [dated, independently linkable live API snapshot](github-api-live-demo.md).
 3. Run `node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 5 --markdown` locally with Node.js 20 or later.
 4. Open the [automated tests](../tests/github-actions-audit.test.mjs) to inspect the validation and read-only behavior.
+5. Review a [second independently verifiable GitHub API demo comparing two public repositories](github-actions-repository-comparison-example.md), with clear sampling and non-billing limitations.
 
 The official program documentation additionally suggests sharing an integration via a blog or video; that is guidance, **not a prerequisite**. The public [integration demo article](github-api-live-demo.md) is shareable without any new hosted infrastructure.
 

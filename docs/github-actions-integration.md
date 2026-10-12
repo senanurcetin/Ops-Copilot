@@ -44,6 +44,8 @@ The script is platform-agnostic except for the shell-specific `export` example; 
 
 ## Comparing repositories (without triggering Actions)
 
+[**Dated real-world API comparison with linked source runs and job timestamps**](github-actions-repository-comparison-example.md).
+
 The independent comparison CLI uses the same read-only GitHub REST API client as the single-repository auditor:
 
 ```bash
