@@ -11,6 +11,7 @@ import {
   validateSinceDate,
   validateDateRange,
   createdDateFilter,
+  createPublicGithubCache,
   validateRepository,
   validateEvent,
   validateStatus,
@@ -554,4 +555,95 @@ test('valid 500-job cap reports truncation instead of pretending an exhaustive r
   assert.equal(result.completed_jobs, 500);
   assert.equal(result.elapsed_job_minutes, 500);
   assert.match(result.sample_warning, /more than 500 jobs/);
+});
+
+
+test('short-lived public cache reuses GET results without mixing private access', async () => {
+  const cache = createPublicGithubCache({ ttlMs: 30000 });
+  let calls = 0;
+  const fetchImpl = async url => {
+    calls++;
+    return { ok: true, json: async () => url.includes('/actions/runs?')
+      ? { workflow_runs: [{ id: 1, name: 'CI', workflow_id: 11 }] }
+      : { total_count: 1, jobs: [{
+        id: 5, started_at: '2026-10-12T10:00:00Z',
+        completed_at: '2026-10-12T10:01:00Z',
+      }] },
+    };
+  };
+  const options = { repository: 'a/b', fetchImpl, publicCache: cache };
+  const first = await auditRepository(options);
+  assert.equal(calls, 2);
+  assert.equal(first.elapsed_job_minutes, 1);
+  first.workflows[0].name = 'mutated';
+  const second = await auditRepository(options);
+  assert.equal(calls, 2, 'Second public audit should use cached read-only data');
+  assert.equal(second.workflows[0].name, 'CI');
+  assert.equal(cache.size(), 2);
+});
+
+test('cache has a TTL, a strict entry cap and returns defensive copies', () => {
+  let currentTime = 1_000;
+  const cache = createPublicGithubCache({
+    ttlMs: 1000, maxEntries: 2, now: () => currentTime,
+  });
+  cache.set('a', { items: [1] });
+  const cloned = cache.get('a');
+  cloned.items.push(2);
+  assert.deepEqual(cache.get('a'), { items: [1] });
+  cache.set('b', 2);
+  cache.set('c', 3);
+  assert.equal(cache.size(), 2);
+  assert.equal(cache.get('a'), undefined, 'Least recently inserted entry is evicted');
+  currentTime += 1000;
+  assert.equal(cache.get('b'), undefined, 'Expired data is not served');
+  for (const options of [{ ttlMs: 0 }, { maxEntries: 0 }, { maxEntries: 1001 }]) {
+    assert.throws(() => createPublicGithubCache(options));
+  }
+});
+
+test('authenticated repository audits never populate or read the shared public cache', async () => {
+  const cache = createPublicGithubCache();
+  let calls = 0;
+  const fetchImpl = async (url, options) => {
+    calls++;
+    assert.equal(options.headers.Authorization, 'Bearer private-token');
+    return { ok: true, json: async () => url.includes('/actions/runs?')
+      ? { workflow_runs: [] } : { jobs: [], total_count: 0 } };
+  };
+  for (let i = 0; i < 2; i++) {
+    await auditRepository({ repository: 'private/repo', token: 'private-token', fetchImpl, publicCache: cache });
+  }
+  assert.equal(calls, 2, 'Authenticated queries are never cached');
+  assert.equal(cache.size(), 0);
+});
+
+test('temporary GitHub 429 responses are retried when Retry-After permits', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    if (calls === 1) return {
+      ok: false, status: 429, headers: { get: name => name === 'retry-after' ? '0' : null },
+    };
+    return { ok: true, json: async () => ({ workflow_runs: [] }) };
+  };
+  const result = await auditRepository({ repository: 'a/b', fetchImpl });
+  assert.equal(calls, 2);
+  assert.equal(result.inspected_runs, 0);
+});
+
+test('large Retry-After stops rather than hammering GitHub or disclosing a token', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    return {
+      ok: false, status: 429,
+      headers: { get: name => name === 'retry-after' ? '3600' : null },
+    };
+  };
+  await assert.rejects(auditRepository({
+    repository: 'private/repo', token: 'private-token',
+    fetchImpl,
+  }), error => /rate limit reached/i.test(error.message) && !error.message.includes('private-token'));
+  assert.equal(calls, 1);
 });
