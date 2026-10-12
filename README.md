@@ -59,6 +59,10 @@ The auditor distinguishes workflows by stable GitHub workflow IDs even when seve
 
 A [public, interactive Actions explorer](/developer-tools/github-actions) lives at the route `/developer-tools/github-actions` when Ops-Copilot is running. It reads up to 10 recent runs through a bounded, cached server-side API endpoint; users can enter a public `owner/repo` and inspect linked workflow records, success/failure counts and sampling limitations. No private GitHub token, GitHub App installation, paid Actions runner or login is required for this developer demo. The demo route is implemented but has not been publicly deployed or independently checked at a live URL.
 
+## GitHub REST resilience
+
+The read-only CLI now has bounded retry handling for short-lived GitHub API throttling/transient errors and a small, 30-second process-local cache for **anonymous public GET responses only**. Private authenticated responses are never stored in the shared cache. See [reliability and rate-limit details](docs/github-actions-integration.md).
+
 ## CLI release management
 
 The GitHub Actions Auditor has a versioned [0.1.0 release candidate changelog](tools/github-actions-auditor/CHANGELOG.md) and a [pre-publication release verification checklist](docs/github-auditor-release-process.md). No package-registry release or new GitHub release has been claimed.
