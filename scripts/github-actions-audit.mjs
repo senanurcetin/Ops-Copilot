@@ -268,7 +268,19 @@ export async function auditRepository({ repository, token, limit = 30, since, un
       }
       jobs.push(...payload.jobs);
     }
-    if (total > jobs.length) truncated = true;
+    // A short page, changing pagination or a duplicated job can silently
+    // understate/overstate elapsed time. Fail closed instead of reporting
+    // a partial result as a complete sample.
+    const expectedCount = Math.min(total, 500);
+    if (jobs.length !== expectedCount) {
+      throw new Error('Unexpected GitHub API response: inconsistent job count for run ' + run.id + '.');
+    }
+    const knownIds = jobs.filter(job => Number.isSafeInteger(job?.id) && job.id > 0)
+      .map(job => job.id);
+    if (new Set(knownIds).size !== knownIds.length) {
+      throw new Error('Unexpected GitHub API response: duplicate job IDs for run ' + run.id + '.');
+    }
+    if (total > 500) truncated = true;
     jobsByRun.set(run.id, jobs);
   }
   return {
