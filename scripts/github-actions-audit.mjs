@@ -256,7 +256,7 @@ async function getJson(path, token, fetchImpl, cache = null) {
     }
     const remaining = response.headers?.get?.('x-ratelimit-remaining');
     const retryAfterRaw = response.headers?.get?.('retry-after');
-    const retryAfter = retryAfterRaw && /^\\d+$/.test(retryAfterRaw) ? Number(retryAfterRaw) : null;
+    const retryAfter = retryAfterRaw && /^\d+$/.test(retryAfterRaw) ? Number(retryAfterRaw) : null;
     const limited = response.status === 429 ||
       (response.status === 403 && (remaining === '0' || retryAfterRaw != null));
     const transient = [502, 503, 504].includes(response.status);
