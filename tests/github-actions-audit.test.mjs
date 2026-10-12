@@ -5,7 +5,9 @@ import {
   auditRepository,
   jobDurationMinutes,
   parseArgs,
+  renderMarkdownReport,
   summarizeRuns,
+  validateSinceDate,
   validateRepository,
 } from '../scripts/github-actions-audit.mjs';
 
@@ -95,4 +97,54 @@ test('access failures provide guidance but never reveal the token', async () => 
     }),
     error => /HTTP 403/.test(error.message) && !error.message.includes('secret-value'),
   );
+});
+
+test('UTC since-date filter rejects impossible dates and malformed input', () => {
+  assert.equal(validateSinceDate('2024-02-29'), '2024-02-29');
+  for (const value of ['2025-02-29', '2026-13-01', '2026-00-01', '2026-10-32',
+    '10/12/2026', '2026-1-01', undefined, '2026-10-12T09:00:00Z']) {
+    assert.throws(() => validateSinceDate(value));
+  }
+  assert.deepEqual(parseArgs(['a/b', '--since', '2026-10-01']), {
+    repository: 'a/b', limit: 30, json: false, since: '2026-10-01',
+  });
+  assert.deepEqual(parseArgs(['a/b', '--markdown']), {
+    repository: 'a/b', limit: 30, json: false, markdown: true,
+  });
+  assert.throws(() => parseArgs(['a/b', '--json', '--markdown']), /either/);
+});
+
+test('date filter is sent to GitHub REST API without write requests', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    return { ok: true, json: async () => ({ workflow_runs: [] }) };
+  };
+  const report = await auditRepository({
+    repository: 'a/b', since: '2026-10-01', limit: 5, fetchImpl,
+  });
+  assert.equal(report.since, '2026-10-01');
+  assert.equal(report.inspected_runs, 0);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /created=%3E%3D2026-10-01/);
+  assert.equal(calls[0].options.method, undefined);
+  await assert.rejects(
+    auditRepository({ repository: 'a/b', since: '2026-02-30', fetchImpl }),
+    /valid calendar date/,
+  );
+  assert.equal(calls.length, 1);
+});
+
+test('Markdown report is deterministic and sanitizes untrusted workflow labels', () => {
+  const report = summarizeRuns('a/b', [
+    { id: 7, name: 'Build | <script>alert(1)</script>', event: 'push', conclusion: 'failure' },
+  ], new Map([[7, [job('2026-10-12T10:00:00Z', '2026-10-12T10:04:00Z')]]]));
+  report.since = '2026-10-01';
+  const markdown = renderMarkdownReport(report);
+  assert.match(markdown, /Created since \(UTC\):/);
+  assert.match(markdown, /Build \\\| &lt;script&gt;/);
+  assert.match(markdown, /\| 1 \| 1 \| 0 \| 4 \|/);
+  assert.match(markdown, /not GitHub billable minutes/);
+  assert.doesNotMatch(markdown, /<script>/);
+  assert.equal(renderMarkdownReport(report), markdown);
 });
