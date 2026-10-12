@@ -29,6 +29,10 @@ These are **not** the separate GitHub Marketplace listing criteria, paid-app ins
 | Real API evidence | [`github-api-live-demo.md`](github-api-live-demo.md) |
 | Support contact | [senanur.cetin.work@gmail.com](mailto:senanur.cetin.work@gmail.com) |
 | Security reporting | [`SECURITY.md`](../SECURITY.md) |
+| Standalone CLI package candidate | [`tools/github-actions-auditor/`](../tools/github-actions-auditor/) — version 0.1.0, not published to npm |
+| Reproducible package tests | [`tests/github-actions-package.test.mjs`](../tests/github-actions-package.test.mjs) |
+| Public interactive UI source | [`/developer-tools/github-actions`](../src/app/developer-tools/github-actions/page.tsx) — not publicly deployed |
+| Optional GitHub App authentication | [`docs/github-app-integration.md`](github-app-integration.md) — local scaffold; no app installation claimed |
 
 ## Short integration description (English)
 
@@ -51,6 +55,18 @@ A [public GitHub Actions Explorer source page](../src/app/developer-tools/github
 ## Optional GitHub App implementation
 
 This repository now also includes [offline-tested GitHub App JWT and installation-token authentication](github-app-integration.md). It illustrates a least-privilege path for private repositories, but the GitHub App has **not** been registered or installed by this repository work. Registration is not required by the core Developer Program eligibility rules.
+
+## Current evidence and deployment status (12 October 2026)
+
+The integration already meets the **technical description** of a public, in-development GitHub REST API application with a declared developer support address; only GitHub can determine program membership.
+
+- **Implemented and merged:** a standalone Node.js CLI, a multi-repository comparison command, workflow/date/branch/event/status filters, validation of job pagination, failure handling and offline tests. No GitHub Actions workflow changes are necessary to use the local CLI.
+- **Prepared, not published:** an independently buildable `@senanurcetin/github-actions-auditor` 0.1.0 npm package candidate with a [release checklist](github-auditor-release-process.md). npm ownership, registry publication and a GitHub Release have not been completed.
+- **Prepared, not registered:** GitHub App JWT/installation-token authentication with requested `Actions: read` permission. App creation, key provisioning and installation are manual account-owner actions; no public app or Marketplace listing is claimed.
+- **Implemented, not publicly deployed:** a browser-based public GitHub Actions Explorer at `/developer-tools/github-actions`, plus a public-only read API route. A Vercel project `ops-copilot-developer-demo` has been created and linked to this GitHub repository, but the initial preview deployment was rejected by a daily Hobby deployment limit on 12 October 2026. **No live demo URL exists yet.** The CLI and [public API case study](github-actions-repository-comparison-example.md) provide independently verifiable alternatives.
+- **Separate open-source contribution evidence (not a Developer Program requirement):** three submitted PRs to `pydata/xarray`: [#11713](https://github.com/pydata/xarray/pull/11713), [#11714](https://github.com/pydata/xarray/pull/11714) and [#11715](https://github.com/pydata/xarray/pull/11715). They were open and not merged when checked on 12 October 2026; do not list them as accepted contributions.
+
+The GitHub Developer Program's published eligibility rules do **not** require an npm package, production deployment, GitHub App registration, Marketplace listing or a particular number of upstream PRs. Do not delay an otherwise accurate membership application just to complete those optional milestones.
 
 ## What the account owner must do
 
