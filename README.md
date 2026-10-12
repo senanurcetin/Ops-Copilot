@@ -1,4 +1,6 @@
-# Ops-Copilot
+# Ops-Copilot — Document-Grounded Industrial AI Assistant
+
+**Next.js · Firebase · Genkit/Gemini · Document retrieval · Operator checklists · SECOM ML case study**
 
 Ops-Copilot is an industrial AI assistant for factory operators who need fast, document-grounded troubleshooting support on the production floor. It now also includes a public industrial data science case study built on the UCI SECOM manufacturing dataset, so the repository demonstrates both product engineering and applied ML reasoning.
 
@@ -15,8 +17,6 @@ Short video demo: [`docs/assets/ops-copilot-case-study.webm`](docs/assets/ops-co
 GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 
 Hiring summary: [`docs/hiring-summary.md`](docs/hiring-summary.md)
-
-Portfolio role: `archive case study`
 
 ## Why this project exists
 
@@ -119,7 +119,9 @@ npm run case-study:refresh
 - The retrieval layer is currently lexical rather than embedding-based.
 - The SECOM layer is an offline portfolio case study, not a deployed live model service.
 
-## Portfolio note
+## Scope and operational boundaries
+
+Document-grounded answers and interactive checklists support operator review; they are not validated operating procedures or substitutes for plant safety policies. The SECOM model is an offline benchmarking exercise, not an integrated live equipment-monitoring service.
 
 This repository is documentation-first. It is intended to show product thinking for industrial AI copilots and industrial data science systems rather than act as a polished public SaaS deployment.
 
