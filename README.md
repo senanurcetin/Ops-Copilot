@@ -55,6 +55,17 @@ The auditor distinguishes workflows by stable GitHub workflow IDs even when seve
 
 **Review the working GitHub API integration:** [reproducible demo with real public API evidence](docs/github-api-live-demo.md) · [Developer Program application details](docs/github-developer-program-application.md). See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
 
+## NEXUS DevOps Intelligence — public MVP preview
+
+A **separate developer-tool interface** is being developed alongside Ops-Copilot before extraction into its own product repository. The new `/developer-tools/nexus` route combines the existing, read-only GitHub Actions preview with a bounded pull-request review dashboard. It reports GitHub-confirmed merge conflicts, other GitHub-reported merge restrictions, and **unknown** states without making up a CI result.
+
+- [NEXUS MVP architecture and verification scope](docs/nexus-devops-intelligence.md)
+- [Interactive dashboard source](src/app/developer-tools/nexus/page.tsx)
+- [Bounded PR API endpoint](src/app/api/public-prs/route.ts)
+- [Regression tests](tests/nexus-public-prs.test.mjs) — run with `npm run test:nexus`
+
+**Status:** feature-branch implementation; not a publicly deployed product, Marketplace listing, GitHub App or exhaustive repository audit. The preview only reads public GitHub repositories and needs no user token.
+
 ## Public interactive GitHub Actions Explorer
 
 A [public, interactive Actions explorer](/developer-tools/github-actions) lives at the route `/developer-tools/github-actions` when Ops-Copilot is running. It reads up to 10 recent runs through a bounded, cached server-side API endpoint; users can enter a public `owner/repo` and inspect linked workflow records, success/failure counts and sampling limitations. No private GitHub token, GitHub App installation, paid Actions runner or login is required for this developer demo. The demo route is implemented but has not been publicly deployed or independently checked at a live URL.
