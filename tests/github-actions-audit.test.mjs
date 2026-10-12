@@ -7,6 +7,7 @@ import {
   parseArgs,
   renderMarkdownReport,
   summarizeRuns,
+  validateBranch,
   validateSinceDate,
   validateRepository,
 } from '../scripts/github-actions-audit.mjs';
@@ -309,4 +310,40 @@ test('GitHub API audit groups same-name workflows by their actual IDs', async ()
   assert.deepEqual(report.workflows.map(w => w.workflow_id), [20_002, 10_001]);
   assert.equal(report.elapsed_job_minutes, 3);
   assert.match(renderMarkdownReport(report), /Build \(#20002\)/);
+});
+
+
+test('CLI accepts Git branch names and rejects missing or control-character branches', () => {
+  assert.deepEqual(parseArgs(['a/b', '--branch', 'feature/sensor-audit']), {
+    repository: 'a/b', limit: 30, json: false, branch: 'feature/sensor-audit',
+  });
+  assert.equal(validateBranch('release/v1.2'), 'release/v1.2');
+  for (const value of ['', '--json', 'feature\nbranch', 'a'.repeat(256), undefined]) {
+    assert.throws(() => validateBranch(value));
+  }
+  assert.throws(() => parseArgs(['a/b', '--branch']));
+});
+
+test('branch and UTC date filters are transmitted as encoded read-only query values', async () => {
+  const called = [];
+  const fetchImpl = async (url, options) => {
+    called.push({ url, options });
+    return { ok: true, json: async () => ({ workflow_runs: [] }) };
+  };
+  const report = await auditRepository({
+    repository: 'a/b', limit: 3, since: '2026-10-01',
+    branch: 'feature/sensor-audit', fetchImpl,
+  });
+  assert.equal(report.branch, 'feature/sensor-audit');
+  assert.equal(report.since, '2026-10-01');
+  assert.equal(called.length, 1);
+  assert.match(called[0].url, /created=%3E%3D2026-10-01/);
+  assert.match(called[0].url, /branch=feature%2Fsensor-audit/);
+  assert.equal(called[0].options.method, undefined);
+  assert.match(renderMarkdownReport(report), /Branch: \*\*feature\/sensor-audit\*\*/);
+
+  await assert.rejects(auditRepository({
+    repository: 'a/b', branch: '', fetchImpl,
+  }), /--branch/);
+  assert.equal(called.length, 1);
 });

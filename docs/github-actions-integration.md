@@ -24,7 +24,7 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 ```bash
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
-node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --limit 50 --markdown > actions-review.md
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --branch main --limit 50 --markdown > actions-review.md
 node --test tests/github-actions-audit.test.mjs
 ```
 
@@ -49,6 +49,7 @@ The script is platform-agnostic except for the shell-specific `export` example; 
 - Malformed GitHub API collections or unexpected JSON responses cause the command to **fail explicitly**, rather than incorrectly displaying an empty successful report.
 - A rate-limited response is reported with safe retry guidance. HTTP failures never print token values. A JSON or Markdown report is not produced after API validation fails.
 - `--since YYYY-MM-DD` uses GitHub's documented `created` workflow-run filter (inclusive lower bound, UTC). It scopes the API query **before** sampling; it does not promise complete historical coverage if more than `--limit` runs match.
+- `--branch REF` scopes workflow run discovery to a single branch using GitHub's `branch` REST query parameter. Branch names containing `/` are URI-encoded, and the selected branch is recorded in text, Markdown and JSON output. Combine it with `--since` to focus on one development line; this does not change branches, run workflows or query billing.
 - `--markdown` renders a deterministic, escaped Markdown summary you can save or attach to an engineering review. It cannot be combined with `--json`.
 - Generated Markdown includes sampled run counts, failures, scheduled triggers, runtime estimates and recommendations. Treat it as diagnostic evidence rather than an exact bill.
 - Recommendations are *heuristics*, not proven savings. A high number of scheduled executions, recurring failures, or significant sample runtime prompts human review.

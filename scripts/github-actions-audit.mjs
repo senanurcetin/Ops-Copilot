@@ -33,6 +33,15 @@ export function validateSinceDate(value) {
   return value;
 }
 
+/** Check CLI branch values before encoding them into a GitHub API query. */
+export function validateBranch(value) {
+  if (typeof value !== 'string' || !value || value.length > 255 ||
+      value.startsWith('-') || /[\u0000-\u001f\u007f]/.test(value)) {
+    throw new Error('--branch requires a nonempty branch name (max 255 characters).');
+  }
+  return value;
+}
+
 /** Escape untrusted workflow names before they appear in a Markdown table. */
 function escapeMarkdown(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;')
@@ -49,6 +58,7 @@ export function renderMarkdownReport(report) {
     '- Jobs without valid completed timestamps: **' + report.incomplete_jobs + '**',
     '- Elapsed job-minutes in this sample: **' + report.elapsed_job_minutes + '**',
     ...(report.since ? ['- Created since (UTC): **' + report.since + '**'] : []),
+    ...(report.branch ? ['- Branch: **' + escapeMarkdown(report.branch) + '**'] : []),
     '',
     '> ' + report.metric_note,
     '',
@@ -170,15 +180,17 @@ async function getJson(path, token, fetchImpl) {
   }
 }
 
-export async function auditRepository({ repository, token, limit = 30, since, fetchImpl = fetch }) {
+export async function auditRepository({ repository, token, limit = 30, since, branch, fetchImpl = fetch }) {
   const [owner, repo] = validateRepository(repository);
   if (since !== undefined) validateSinceDate(since);
+  if (branch !== undefined) validateBranch(branch);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be an integer from 1 to 100.');
   }
   const prefix = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
   const dateFilter = since ? '&created=' + encodeURIComponent('>=' + since) : '';
-  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}`, token, fetchImpl);
+  const branchFilter = branch ? '&branch=' + encodeURIComponent(branch) : '';
+  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}${branchFilter}`, token, fetchImpl);
   if (!runsResult || !Array.isArray(runsResult.workflow_runs)) {
     throw new Error('Unexpected GitHub API response: workflow_runs must be an array.');
   }
@@ -211,6 +223,7 @@ export async function auditRepository({ repository, token, limit = 30, since, fe
   return {
     ...summarizeRuns(repository, runs, jobsByRun),
     ...(since ? { since } : {}),
+    ...(branch ? { branch } : {}),
     sample_warning: [
       ...(truncated ? ['Some runs contain more than 500 jobs; sampled job durations are incomplete.'] : []),
       ...(runs.length === limit ? ['The sample may exclude older runs; this is not an account-wide monthly report.'] : []),
@@ -220,7 +233,7 @@ export async function auditRepository({ repository, token, limit = 30, since, fe
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--json | --markdown]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--branch REF] [--json | --markdown]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -234,11 +247,13 @@ export function parseArgs(args) {
   let json = false;
   let markdown = false;
   let since;
+  let branch;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
+    else if (arg === '--branch') branch = validateBranch(args[++i]);
     else if (arg === '--limit') {
       if (!/^\d+$/.test(args[i + 1] || '')) throw new Error('--limit requires a positive integer.');
       limit = Number(args[++i]);
@@ -249,7 +264,7 @@ export function parseArgs(args) {
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
   if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
-  return { repository, limit, json, ...(since ? { since } : {}), ...(markdown ? { markdown } : {}) };
+  return { repository, limit, json, ...(since ? { since } : {}), ...(branch ? { branch } : {}), ...(markdown ? { markdown } : {}) };
 }
 
 async function main() {
@@ -260,6 +275,7 @@ async function main() {
       repository: options.repository,
       limit: options.limit,
       since: options.since,
+      branch: options.branch,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
     if (options.json) return console.log(JSON.stringify(data, null, 2));
@@ -268,6 +284,7 @@ async function main() {
     console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     console.log(`NOTE: ${data.metric_note}`);
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
+    if (data.branch) console.log(`Branch: ${data.branch}`);
     for (const w of data.workflows) {
       const workflowLabel = w.name + (w.workflow_id ? ' (#' + w.workflow_id + ')' : '');
       console.log(`- ${workflowLabel}: ${w.runs} runs, ${w.failures} failures, ${w.elapsed_job_minutes} elapsed job-minutes`);
