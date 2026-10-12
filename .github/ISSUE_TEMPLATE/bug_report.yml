@@ -1,0 +1,46 @@
+name: Bug report
+description: Report reproducible incorrect behavior using synthetic or public data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Do not disclose security vulnerabilities or secrets here. Follow SECURITY.md for private reporting. Never paste real user documents or factory data."
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: State the actual behavior and user impact.
+      placeholder: "The read-only auditor reports ..."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Use public or synthetic inputs only.
+      placeholder: |
+        1. Run ...
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node.js version, and relevant project commit if applicable.
+      placeholder: "Node.js 20, Windows 11, commit ..."
+    validations:
+      required: false
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized logs or test evidence
+      description: Do not include API tokens, private repository metadata, session cookies, or personal data.
+    validations:
+      required: false
