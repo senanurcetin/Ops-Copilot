@@ -44,6 +44,10 @@ These are **not** the separate GitHub Marketplace listing criteria, paid-app ins
 
 The official program documentation additionally suggests sharing an integration via a blog or video; that is guidance, **not a prerequisite**. The public [integration demo article](github-api-live-demo.md) is shareable without any new hosted infrastructure.
 
+## Interactive public repository demo
+
+A [public GitHub Actions Explorer source page](../src/app/developer-tools/github-actions/page.tsx) and [read-only server-side API handler](../src/app/api/public-actions/route.ts) demonstrate an accessible UI for selecting a public repository and viewing GitHub workflow history. The route is `/developer-tools/github-actions` **when the app is running**; there is no claim that this page has been publicly deployed.
+
 ## Optional GitHub App implementation
 
 This repository now also includes [offline-tested GitHub App JWT and installation-token authentication](github-app-integration.md). It illustrates a least-privilege path for private repositories, but the GitHub App has **not** been registered or installed by this repository work. Registration is not required by the core Developer Program eligibility rules.
