@@ -54,7 +54,8 @@ export function renderMarkdownReport(report) {
     '',
     '| Workflow | Runs | Failures | Scheduled | Elapsed job-minutes |',
     '| --- | ---: | ---: | ---: | ---: |',
-    ...report.workflows.map(w => '| ' + escapeMarkdown(w.name) + ' | ' + w.runs +
+    ...report.workflows.map(w => '| ' + escapeMarkdown(w.name) +
+      (w.workflow_id ? ' (#' + w.workflow_id + ')' : '') + ' | ' + w.runs +
       ' | ' + w.failures + ' | ' + w.scheduled + ' | ' + w.elapsed_job_minutes + ' |'),
     '',
   ];
@@ -84,14 +85,19 @@ export function summarizeRuns(repository, runs, jobsByRun) {
   let completedJobs = 0;
   let incompleteJobs = 0;
   for (const run of runs) {
-    const name = run.name || `workflow #${run.workflow_id || 'unknown'}`;
-    if (!workflows.has(name)) {
-      workflows.set(name, {
-        name, runs: 0, failures: 0, cancelled: 0, scheduled: 0,
+    // The display name is not a stable identifier: two workflow files can
+    // share it, and a workflow can be renamed while keeping its ID.
+    const workflowId = Number.isSafeInteger(run.workflow_id) && run.workflow_id > 0
+      ? run.workflow_id : null;
+    const name = run.name || (workflowId ? 'workflow #' + workflowId : 'workflow #unknown');
+    const groupKey = workflowId ? 'id:' + workflowId : 'name:' + name;
+    if (!workflows.has(groupKey)) {
+      workflows.set(groupKey, {
+        name, workflow_id: workflowId, runs: 0, failures: 0, cancelled: 0, scheduled: 0,
         job_count: 0, elapsed_job_minutes: 0,
       });
     }
-    const item = workflows.get(name);
+    const item = workflows.get(groupKey);
     item.runs++;
     if (run.conclusion === 'failure') item.failures++;
     if (run.conclusion === 'cancelled') item.cancelled++;
@@ -114,14 +120,15 @@ export function summarizeRuns(repository, runs, jobsByRun) {
   })).sort((a, b) => b.elapsed_job_minutes - a.elapsed_job_minutes || b.runs - a.runs);
   const recommendations = [];
   for (const w of data) {
+    const label = w.name + (w.workflow_id ? ' (#' + w.workflow_id + ')' : '');
     if (w.scheduled >= 5) {
-      recommendations.push(`${w.name}: ${w.scheduled} scheduled runs in the sample; review cron frequency and move simple uptime pings outside Actions.`);
+      recommendations.push(`${label}: ${w.scheduled} scheduled runs in the sample; review cron frequency and move simple uptime pings outside Actions.`);
     }
     if (w.failures >= 2) {
-      recommendations.push(`${w.name}: ${w.failures} failed runs; investigate repeated failures before rerunning expensive jobs.`);
+      recommendations.push(`${label}: ${w.failures} failed runs; investigate repeated failures before rerunning expensive jobs.`);
     }
     if (w.elapsed_job_minutes >= 30) {
-      recommendations.push(`${w.name}: ${w.elapsed_job_minutes} elapsed job-minutes in the sample; consider path filters, caching and cancelling superseded runs.`);
+      recommendations.push(`${label}: ${w.elapsed_job_minutes} elapsed job-minutes in the sample; consider path filters, caching and cancelling superseded runs.`);
     }
   }
   return {
@@ -262,7 +269,8 @@ async function main() {
     console.log(`NOTE: ${data.metric_note}`);
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
     for (const w of data.workflows) {
-      console.log(`- ${w.name}: ${w.runs} runs, ${w.failures} failures, ${w.elapsed_job_minutes} elapsed job-minutes`);
+      const workflowLabel = w.name + (w.workflow_id ? ' (#' + w.workflow_id + ')' : '');
+      console.log(`- ${workflowLabel}: ${w.runs} runs, ${w.failures} failures, ${w.elapsed_job_minutes} elapsed job-minutes`);
     }
     if (data.sample_warning) console.log(`Warning: ${data.sample_warning}`);
     if (data.recommendations.length) {

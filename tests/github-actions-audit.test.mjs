@@ -237,3 +237,76 @@ test('GitHub rate limit and malformed JSON errors never disclose a token', async
     fetchImpl: async () => ({ ok: true, json: async () => { throw new SyntaxError('invalid json'); } }),
   }), /returned invalid JSON/);
 });
+
+
+test('separate workflow IDs prevent unrelated same-name workflows from merging', () => {
+  const runs = [
+    { id: 1, workflow_id: 101, name: 'CI', event: 'push', conclusion: 'failure' },
+    { id: 2, workflow_id: 202, name: 'CI', event: 'schedule', conclusion: 'success' },
+    { id: 3, workflow_id: 101, name: 'Old CI', event: 'push', conclusion: 'success' },
+  ];
+  const timings = new Map([
+    [1, [job('2026-10-12T10:00:00Z', '2026-10-12T10:02:00Z')]],
+    [2, [job('2026-10-12T11:00:00Z', '2026-10-12T11:04:00Z')]],
+    [3, [job('2026-10-12T12:00:00Z', '2026-10-12T12:03:00Z')]],
+  ]);
+  const report = summarizeRuns('a/b', runs, timings);
+  assert.equal(report.inspected_runs, 3);
+  assert.equal(report.elapsed_job_minutes, 9);
+  assert.equal(report.workflows.length, 2);
+  const first = report.workflows.find(w => w.workflow_id === 101);
+  const second = report.workflows.find(w => w.workflow_id === 202);
+  assert.deepEqual({ name: first.name, runs: first.runs, failures: first.failures, minutes: first.elapsed_job_minutes },
+    { name: 'CI', runs: 2, failures: 1, minutes: 5 });
+  assert.deepEqual({ name: second.name, runs: second.runs, scheduled: second.scheduled, minutes: second.elapsed_job_minutes },
+    { name: 'CI', runs: 1, scheduled: 1, minutes: 4 });
+  const markdown = renderMarkdownReport(report);
+  assert.match(markdown, /CI \(#101\)/);
+  assert.match(markdown, /CI \(#202\)/);
+});
+
+test('recommendations identify the actual workflow ID rather than ambiguous name', () => {
+  const runs = Array.from({ length: 5 }, (_, idx) => ({
+    id: idx + 1, workflow_id: 99, name: 'Hourly', event: 'schedule',
+    conclusion: 'success',
+  }));
+  const report = summarizeRuns('a/b', runs, new Map());
+  assert.equal(report.workflows[0].workflow_id, 99);
+  assert.match(report.recommendations[0], /Hourly \(#99\): 5 scheduled runs/);
+});
+
+test('legacy run records without a workflow ID remain supported by name fallback', () => {
+  const runs = [
+    { id: 1, name: 'CI', event: 'push', conclusion: 'success' },
+    { id: 2, name: 'CI', event: 'schedule', conclusion: 'failure' },
+  ];
+  const report = summarizeRuns('a/b', runs, new Map());
+  assert.equal(report.workflows.length, 1);
+  assert.equal(report.workflows[0].workflow_id, null);
+  assert.equal(report.workflows[0].runs, 2);
+});
+
+test('GitHub API audit groups same-name workflows by their actual IDs', async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    calls.push(url);
+    if (url.includes('/actions/runs?')) {
+      return { ok: true, json: async () => ({
+        workflow_runs: [
+          { id: 10, workflow_id: 10_001, name: 'Build', event: 'push', conclusion: 'success' },
+          { id: 20, workflow_id: 20_002, name: 'Build', event: 'push', conclusion: 'success' },
+        ],
+      }) };
+    }
+    const start = '2026-10-12T10:00:00Z';
+    return { ok: true, json: async () => ({
+      jobs: [job(start, url.includes('/runs/10/') ? '2026-10-12T10:01:00Z' : '2026-10-12T10:02:00Z')],
+      total_count: 1,
+    }) };
+  };
+  const report = await auditRepository({ repository: 'a/b', fetchImpl });
+  assert.equal(calls.length, 3);
+  assert.deepEqual(report.workflows.map(w => w.workflow_id), [20_002, 10_001]);
+  assert.equal(report.elapsed_job_minutes, 3);
+  assert.match(renderMarkdownReport(report), /Build \(#20002\)/);
+});

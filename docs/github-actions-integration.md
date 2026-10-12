@@ -42,6 +42,7 @@ The script is platform-agnostic except for the shell-specific `export` example; 
 ## Report semantics and limits
 
 - `elapsed_job_minutes` is the sum of `completed_at - started_at` for sampled jobs, rounded to one decimal.
+- Workflows are grouped by GitHub's **stable numeric `workflow_id`**, not their editable display names. Two different workflow files named `CI` are reported separately, and a renamed workflow retains a continuous history under its original ID. Text and Markdown outputs display this ID beside the name, while JSON includes `workflow_id` on each workflow record. For older/mocked records without a valid ID, the tool falls back to grouping by name; such a fallback may combine identically named workflows.
 - **It is not GitHub's billed minutes**, nor an account-level billing statement. Job time excludes incomplete jobs. Runner multipliers, OS-specific rates, storage, cached artifact usage, and additional account activity are not modeled.
 - A maximum of 100 recent runs can be inspected; at most 500 jobs per run are sampled. The report flags truncated results.
 - Jobs without usable start/end timestamps (including malformed or reversed timestamps) are counted separately as `incomplete_jobs`, **not** as completed zero-minute jobs. Genuine zero-minute jobs remain valid.
