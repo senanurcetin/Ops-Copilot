@@ -1,4 +1,7 @@
-'use server';
+// Internal server module only. Do not use a file-level 'use server' directive:
+// that turns exported helpers accepting caller-supplied context/user IDs into
+// directly invocable Next.js Server Actions. Only src/app/actions.ts exposes
+// authenticated public actions.
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/server/firebase-admin';
