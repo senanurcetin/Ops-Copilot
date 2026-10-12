@@ -1,85 +1,31 @@
-# Security Policy
+# Security policy
 
-## Reporting a Vulnerability
+Ops-Copilot is a portfolio and research demonstration of an industrial troubleshooting assistant, an offline manufacturing-risk case study, and a read-only GitHub REST API auditor. It is **not** a production-certified operational safety or cybersecurity system.
 
-If you discover a security vulnerability in Ops-Copilot, please email us at security@senanurcetin.dev instead of using the issue tracker. We take all security issues seriously and will respond promptly.
+## Privately report a vulnerability
 
-### What to Include
+**Do not open a public issue or pull request containing exploitable details, credentials, user documents, tokens or factory information.**
 
-When reporting a vulnerability, please provide:
+- Preferred contact: [senanur.cetin.work@gmail.com](mailto:senanur.cetin.work@gmail.com), subject **Ops-Copilot security report**.
+- If GitHub's [private vulnerability reporting](https://github.com/senanurcetin/Ops-Copilot/security/advisories) feature has been enabled for this repository, you may also use its **Report a vulnerability** form. The presence of this link alone does not confirm the feature is enabled.
 
-- A clear description of the vulnerability
-- Steps to reproduce the issue
-- Potential impact of the vulnerability
-- Suggested fix (if applicable)
+Useful details include the affected commit/version, reproducible steps using **synthetic data**, observed/expected behavior, potential impact, and any safe suggested remediation. Avoid attaching live exploit payloads that could disclose user or plant information.
 
-### Timeline
+This is a single-maintainer project. Reports are triaged on a best-effort basis; response and remediation times depend on severity and maintainer availability and **are not guaranteed**. Please allow reasonable time for assessment before public disclosure.
 
-- **Initial Response**: We aim to acknowledge your report within 24 hours
-- **Assessment**: We will assess the vulnerability and determine its severity
-- **Fix Timeline**: 
-  - Critical vulnerabilities: 24-48 hours
-  - High vulnerabilities: 3-5 days
-  - Medium vulnerabilities: 1-2 weeks
-  - Low vulnerabilities: 30 days
+## Boundaries and known limitations
 
-## Security Best Practices
+- **Industrial usage:** This project does not provide validated plant operating procedures or safety controls. Never use its AI outputs to override an approved operator procedure, interlock, permit-to-work process, or engineering authority.
+- **Authentication and secrets:** The application uses Firebase authentication and Firestore. Check the specific deployed configuration and applicable rules before asserting tenant isolation. Store credentials in environment variables, not source code.
+- **Language-model content:** Retrieved documentation and generated text can be wrong, malicious or incomplete. Treat source passages as untrusted input and require operator verification.
+- **GitHub REST integration:** The standalone auditor calls read-only Actions endpoints. For private repositories, use a narrowly scoped `Actions: read` token; keep it out of command lines, reports, examples and tickets.
+- **Benchmarks:** Manufacturing-model results are offline case-study estimates, not production guarantees.
+- **Deployment:** Security posture depends on hosting, dependency versions, environment configuration and ongoing maintenance; this policy is not a compliance certificate.
 
-### Authentication & Authorization
+## Supported versions
 
-- All authentication flows use Firebase Authentication
-- Passwords are never stored in plaintext
-- API keys and sensitive credentials are stored in environment variables
-- User sessions are validated on every request
+Security fixes, when feasible, target the current `main` branch. Historical commits, forks, and third-party deployments have no promised support or patch schedule. Project maturity and status are described in [README.md](README.md).
 
-### Data Protection
+## Ordinary bugs and questions
 
-- Firestore rules enforce strict access controls
-- All data at rest is encrypted by Google Cloud
-- HTTPS is enforced for all connections
-- User data is only accessible to the authenticated user
-
-### Dependency Management
-
-- Dependencies are regularly updated to patch security vulnerabilities
-- We use `npm audit` to identify and fix vulnerabilities
-- Critical vulnerabilities are patched immediately
-- Regular security audits are performed
-
-### Code Security
-
-- Input validation and sanitization
-- Protection against XSS attacks
-- CSRF token validation
-- SQL injection protection (N/A - using Firestore)
-- Rate limiting on API endpoints
-
-## Supported Versions
-
-| Version | Status | End of Support |
-|---------|--------|----------------|
-| 1.0.x   | Active | TBD            |
-
-## Compliance
-
-Ops-Copilot follows security best practices and complies with:
-
-- OWASP Top 10 guidelines
-- CWE/SANS Top 25 most dangerous software weaknesses
-- Google Cloud Security Best Practices
-
-## Security Headers
-
-The application sets the following security headers:
-
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: SAMEORIGIN`
-- `X-XSS-Protection: 1; mode=block`
-- `Strict-Transport-Security: max-age=31536000`
-- `Content-Security-Policy: default-src 'self'`
-
-## Third-Party Dependencies
-
-We regularly audit our third-party dependencies for security vulnerabilities. Critical security patches are applied immediately.
-
-For questions about security, please contact: security@senanurcetin.dev
+For non-security issues, use the repository's [issue tracker](https://github.com/senanurcetin/Ops-Copilot/issues) or consult [CONTRIBUTING.md](CONTRIBUTING.md). Developer support: [senanur.cetin.work@gmail.com](mailto:senanur.cetin.work@gmail.com).

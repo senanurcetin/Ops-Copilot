@@ -1,0 +1,35 @@
+name: Feature request
+description: Propose a scoped improvement with a clear user problem and success criteria.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Share non-sensitive information only. For vulnerabilities, use the private contact described in SECURITY.md."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Explain the user workflow and why current behavior is insufficient.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Outline the minimum useful change without relying on production credentials or private data.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and tests
+      description: Describe how contributors could verify success with offline or public data.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Privacy, permissions and operational limitations
+      description: Note any API scopes, industrial safety assumptions, or effects on existing users.
+    validations:
+      required: false

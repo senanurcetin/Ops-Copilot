@@ -149,6 +149,12 @@ Document-grounded answers and interactive checklists support operator review; th
 
 This repository is documentation-first. It is intended to show product thinking for industrial AI copilots and industrial data science systems rather than act as a polished public SaaS deployment.
 
+## Contributing and security
+
+Contributions to the public GitHub API tooling, documentation, accessibility and offline tests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for local test commands and review guidelines. Report non-sensitive bugs using the GitHub issue forms. Vulnerabilities require private disclosure through [SECURITY.md](SECURITY.md), not public issues.
+
+Developer support: [senanur.cetin.work@gmail.com](mailto:senanur.cetin.work@gmail.com). This is a demonstration project, not a certified industrial safety product.
+
 ## License
 
 MIT
