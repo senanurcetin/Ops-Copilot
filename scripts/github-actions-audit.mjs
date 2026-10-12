@@ -64,6 +64,27 @@ export function validateBranch(value) {
   return value;
 }
 
+/** GitHub exposes an event filter without a fixed enum. Reject malformed names. */
+export function validateEvent(value) {
+  if (typeof value !== 'string' || !/^[a-z][a-z0-9_]{0,63}$/.test(value)) {
+    throw new Error('--event requires a GitHub Actions event name (e.g. push, pull_request, schedule).');
+  }
+  return value;
+}
+
+const ACTIONS_STATUSES = new Set([
+  'completed', 'action_required', 'cancelled', 'failure', 'neutral',
+  'skipped', 'stale', 'success', 'timed_out', 'in_progress',
+  'queued', 'requested', 'waiting', 'pending',
+]);
+
+export function validateStatus(value) {
+  if (typeof value !== 'string' || !ACTIONS_STATUSES.has(value)) {
+    throw new Error('--status must be a supported GitHub Actions status or conclusion.');
+  }
+  return value;
+}
+
 /** Escape untrusted workflow names before they appear in a Markdown table. */
 function escapeMarkdown(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;')
@@ -82,6 +103,8 @@ export function renderMarkdownReport(report) {
     ...(report.since ? ['- Created since (UTC): **' + report.since + '**'] : []),
     ...(report.until ? ['- Created until (UTC): **' + report.until + '**'] : []),
     ...(report.branch ? ['- Branch: **' + escapeMarkdown(report.branch) + '**'] : []),
+    ...(report.event ? ['- Trigger event: **' + escapeMarkdown(report.event) + '**'] : []),
+    ...(report.status ? ['- Run status/conclusion: **' + escapeMarkdown(report.status) + '**'] : []),
     '',
     '> ' + report.metric_note,
     '',
@@ -203,10 +226,12 @@ async function getJson(path, token, fetchImpl) {
   }
 }
 
-export async function auditRepository({ repository, token, limit = 30, since, until, branch, fetchImpl = fetch }) {
+export async function auditRepository({ repository, token, limit = 30, since, until, branch, event, status, fetchImpl = fetch }) {
   const [owner, repo] = validateRepository(repository);
   validateDateRange({ since, until });
   if (branch !== undefined) validateBranch(branch);
+  if (event !== undefined) validateEvent(event);
+  if (status !== undefined) validateStatus(status);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be an integer from 1 to 100.');
   }
@@ -214,7 +239,9 @@ export async function auditRepository({ repository, token, limit = 30, since, un
   const dateValue = createdDateFilter({ since, until });
   const dateFilter = dateValue ? '&created=' + encodeURIComponent(dateValue) : '';
   const branchFilter = branch ? '&branch=' + encodeURIComponent(branch) : '';
-  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}${branchFilter}`, token, fetchImpl);
+  const eventFilter = event ? '&event=' + encodeURIComponent(event) : '';
+  const statusFilter = status ? '&status=' + encodeURIComponent(status) : '';
+  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}${branchFilter}${eventFilter}${statusFilter}`, token, fetchImpl);
   if (!runsResult || !Array.isArray(runsResult.workflow_runs)) {
     throw new Error('Unexpected GitHub API response: workflow_runs must be an array.');
   }
@@ -249,6 +276,8 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     ...(since ? { since } : {}),
     ...(until ? { until } : {}),
     ...(branch ? { branch } : {}),
+    ...(event ? { event } : {}),
+    ...(status ? { status } : {}),
     sample_warning: [
       ...(truncated ? ['Some runs contain more than 500 jobs; sampled job durations are incomplete.'] : []),
       ...(runs.length === limit ? ['The sample may exclude older runs; this is not an account-wide monthly report.'] : []),
@@ -258,7 +287,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--json | --markdown]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -274,6 +303,8 @@ export function parseArgs(args) {
   let since;
   let until;
   let branch;
+  let event;
+  let status;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--json') json = true;
@@ -286,6 +317,8 @@ export function parseArgs(args) {
       until = validateDateRange({ until: args[++i] }).until;
     }
     else if (arg === '--branch') branch = validateBranch(args[++i]);
+    else if (arg === '--event') event = validateEvent(args[++i]);
+    else if (arg === '--status') status = validateStatus(args[++i]);
     else if (arg === '--limit') {
       if (!/^\d+$/.test(args[i + 1] || '')) throw new Error('--limit requires a positive integer.');
       limit = Number(args[++i]);
@@ -297,7 +330,7 @@ export function parseArgs(args) {
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
   if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
   validateDateRange({ since, until });
-  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(markdown ? { markdown } : {}) };
+  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}) };
 }
 
 async function main() {
@@ -310,6 +343,8 @@ async function main() {
       since: options.since,
       until: options.until,
       branch: options.branch,
+      event: options.event,
+      status: options.status,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
     if (options.json) return console.log(JSON.stringify(data, null, 2));
@@ -320,6 +355,8 @@ async function main() {
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
     if (data.until) console.log(`Created until (UTC): ${data.until}`);
     if (data.branch) console.log(`Branch: ${data.branch}`);
+    if (data.event) console.log(`Trigger event: ${data.event}`);
+    if (data.status) console.log(`Run status/conclusion: ${data.status}`);
     for (const w of data.workflows) {
       const workflowLabel = w.name + (w.workflow_id ? ' (#' + w.workflow_id + ')' : '');
       console.log(`- ${workflowLabel}: ${w.runs} runs, ${w.failures} failures, ${w.elapsed_job_minutes} elapsed job-minutes`);
