@@ -50,7 +50,7 @@ The independent comparison CLI uses the same read-only GitHub REST API client as
 
 ```bash
 node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --json
-node scripts/github-actions-compare.mjs owner/one owner/two --since 2026-10-01 --markdown > comparison.md
+node scripts/github-actions-compare.mjs owner/one owner/two --since 2026-10-01 --until 2026-10-12 --markdown > comparison.md
 npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 ```
 
