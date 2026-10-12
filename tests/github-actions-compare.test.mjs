@@ -267,3 +267,43 @@ test('invalid multi-repo API filters fail before any repository is requested', a
   }), /--status/);
   assert.equal(calls, 0);
 });
+
+
+test('repository comparison distinguishes inspected runs from API matches', async () => {
+  const comparison = await compareRepositories({
+    repositories: ['org/few', 'org/many'],
+    limit: 3,
+    auditImpl: async ({ repository }) => report(repository, 2, {
+      total_matching_runs: repository === 'org/many' ? 400 : 3,
+    }),
+  });
+  const few = comparison.repositories.find(r => r.repository === 'org/few');
+  const many = comparison.repositories.find(r => r.repository === 'org/many');
+  assert.equal(few.total_matching_runs, 3);
+  assert.equal(many.total_matching_runs, 400);
+  assert.equal(many.inspected_runs, 3);
+  const md = renderComparisonMarkdown(comparison);
+  assert.match(md, /API matches/);
+  assert.match(md, /org\/many \| 3 \| 1 \| 2 \| 2 \| 1 \| 2 \| 400 \|/);
+  assert.match(md, /org\/few \| 3 \| 1 \| 2 \| 2 \| 1 \| 2 \| 3 \|/);
+});
+
+test('missing API match counts are not shown as zero in comparisons', async () => {
+  const comparison = await compareRepositories({
+    repositories: ['org/first', 'org/second'],
+    auditImpl: async ({ repository }) => report(repository, 1),
+  });
+  assert.equal(comparison.repositories[0].total_matching_runs, undefined);
+  assert.match(renderComparisonMarkdown(comparison), / \| unknown \|/);
+});
+
+test('comparison rejects contradictory total matching run counts', async () => {
+  for (const total_matching_runs of [-1, 2, '3', 3.2, null]) {
+    await assert.rejects(compareRepositories({
+      repositories: ['org/a', 'org/b'],
+      auditImpl: async ({ repository }) => report(repository, 1, {
+        total_matching_runs,
+      }),
+    }), /Unexpected audit result/);
+  }
+});
