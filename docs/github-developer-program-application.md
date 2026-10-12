@@ -1,5 +1,7 @@
 # GitHub Developer Program — application evidence
 
+> **Registration update — 12 October 2026:** The account owner reports that GitHub displayed **"Thanks for joining! You're in!"** after registering for the GitHub Developer Program. This records the signup confirmation as provided by the account owner; it is not a separately verified API account entitlement check. Do not infer Copilot credits, Actions minutes, GitHub Marketplace approval, or OpenAI/Claude program membership from this registration. Official documentation: https://docs.github.com/en/integrations/concepts/github-developer-program ; registration agreement: https://docs.github.com/en/site-policy/github-terms/github-registered-developer-agreement.
+
 This document contains a ready-to-review summary for the **GitHub Developer Program**. It does not represent approval, a GitHub-issued certificate, or a registered Marketplace listing.
 
 ## Eligibility checked against the official program
