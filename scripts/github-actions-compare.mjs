@@ -78,7 +78,7 @@ export async function compareRepositories({
   for (const repository of repositories) {
     let report;
     try {
-      report = await auditImpl({ repository, limit, since, until, token });
+      report = await auditImpl({ repository, limit, since, ...(until ? { until } : {}), token });
     } catch (error) {
       throw new Error('Could not audit ' + repository + ': ' + error.message);
     }
