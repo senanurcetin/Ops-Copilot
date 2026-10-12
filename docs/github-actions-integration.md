@@ -66,7 +66,7 @@ npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 
 ## REST reliability and request efficiency
 
-- The command retries an idempotent GitHub **GET** request at most twice for short transient `429`, `502`, `503` or `504` responses. If GitHub provides a short numeric `Retry-After` (up to 3 seconds), it is respected. Long rate-limit windows are reported immediately rather than issuing more requests. Authentication failures (`401`, permission-denied `403`) are not blindly retried.
+- The command retries an idempotent GitHub **GET** request at most twice for short transient `429`, `502`, `503` or `504` responses. If GitHub provides a short `Retry-After` (either numeric seconds or a valid HTTP-date within 3 seconds), it is respected. Long, invalid or ambiguous `Retry-After` values are treated as a reason **not to retry**, preventing unintended request bursts during server throttling. Long rate-limit windows are reported immediately rather than issuing more requests. Authentication failures (`401`, permission-denied `403`) are not blindly retried.
 - For **anonymous public repository requests only**, a process-local cache can reuse successful GitHub API responses for 30 seconds, with a maximum of 100 entries. Expired entries are ignored; cached data is defensively copied. **Authenticated requests are never cached** in this shared cache, to prevent private-token response mixing.
 - The public web Explorer also uses server-side cache revalidation; it does not store installation tokens.
 - This is not persistent caching across separate CLI processes, and it does not change or consume GitHub Actions runner quotas. Never interpret sampled job durations as billed minutes.
