@@ -3,6 +3,8 @@ name: Grounded Ops QA
 description: Verify document-grounded industrial troubleshooting, ranking correctness, Firebase session boundaries and operator data isolation using offline Node tests.
 user-invocable: true
 disable-model-invocation: true
+include-custom-instructions: true
+tools: ["read", "search", "edit", "execute"]
 ---
 
 # Role
