@@ -46,6 +46,7 @@ export function renderMarkdownReport(report) {
     '',
     '- Recent runs inspected: **' + report.inspected_runs + '**',
     '- Completed jobs: **' + report.completed_jobs + '**',
+    '- Jobs without valid completed timestamps: **' + report.incomplete_jobs + '**',
     '- Elapsed job-minutes in this sample: **' + report.elapsed_job_minutes + '**',
     ...(report.since ? ['- Created since (UTC): **' + report.since + '**'] : []),
     '',
@@ -64,13 +65,17 @@ export function renderMarkdownReport(report) {
   return rows.join('\n') + '\n';
 }
 
-export function jobDurationMinutes(job) {
-  if (!job?.started_at || !job?.completed_at) return 0;
+// A zero-minute job is valid. Missing or invalid timestamps are *not*.
+function completedJobMinutes(job) {
+  if (typeof job?.started_at !== 'string' || typeof job?.completed_at !== 'string') return null;
   const start = Date.parse(job.started_at);
   const end = Date.parse(job.completed_at);
-  return Number.isFinite(start) && Number.isFinite(end) && end >= start
-    ? (end - start) / 60000
-    : 0;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return (end - start) / 60000;
+}
+
+export function jobDurationMinutes(job) {
+  return completedJobMinutes(job) ?? 0;
 }
 
 export function summarizeRuns(repository, runs, jobsByRun) {
@@ -92,11 +97,11 @@ export function summarizeRuns(repository, runs, jobsByRun) {
     if (run.conclusion === 'cancelled') item.cancelled++;
     if (run.event === 'schedule') item.scheduled++;
     for (const job of jobsByRun.get(run.id) || []) {
-      if (!job.started_at || !job.completed_at) {
+      const duration = completedJobMinutes(job);
+      if (duration === null) {
         incompleteJobs++;
         continue;
       }
-      const duration = jobDurationMinutes(job);
       item.elapsed_job_minutes += duration;
       totalJobMinutes += duration;
       item.job_count++;
@@ -142,35 +147,56 @@ async function getJson(path, token, fetchImpl) {
     signal: AbortSignal.timeout(15000),
   });
   if (!response.ok) {
-    const reason = response.status === 401 || response.status === 403 || response.status === 404
-      ? 'Check access permissions, token scope (Actions: read), and API rate limits.'
-      : 'GitHub API request failed.';
+    const limited = response.status === 429 ||
+      (response.status === 403 && response.headers?.get?.('x-ratelimit-remaining') === '0');
+    const reason = limited
+      ? 'API rate limit reached. Retry after the GitHub rate-limit window resets or use a scoped read-only token.'
+      : response.status === 401 || response.status === 403 || response.status === 404
+        ? 'Check repository access and token permissions (Actions: read).'
+        : 'GitHub API request failed.';
     throw new Error(`GitHub API HTTP ${response.status}. ${reason}`);
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch {
+    throw new Error('GitHub API returned invalid JSON.');
+  }
 }
 
 export async function auditRepository({ repository, token, limit = 30, since, fetchImpl = fetch }) {
   const [owner, repo] = validateRepository(repository);
+  if (since !== undefined) validateSinceDate(since);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be an integer from 1 to 100.');
   }
   const prefix = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
-  const dateFilter = since ? '&created=' + encodeURIComponent('>=' + validateSinceDate(since)) : '';
+  const dateFilter = since ? '&created=' + encodeURIComponent('>=' + since) : '';
   const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}`, token, fetchImpl);
-  const runs = Array.isArray(runsResult.workflow_runs) ? runsResult.workflow_runs.slice(0, limit) : [];
+  if (!runsResult || !Array.isArray(runsResult.workflow_runs)) {
+    throw new Error('Unexpected GitHub API response: workflow_runs must be an array.');
+  }
+  const runs = runsResult.workflow_runs.slice(0, limit);
   const jobsByRun = new Map();
   let truncated = false;
   // Sequential reads deliberately respect unauthenticated and low-rate-limit accounts.
   for (const run of runs) {
-    if (!Number.isSafeInteger(run.id)) continue;
+    if (!Number.isSafeInteger(run?.id) || run.id < 1) {
+      throw new Error('Unexpected GitHub API response: invalid workflow run id.');
+    }
     const firstPage = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=1`, token, fetchImpl);
-    const jobs = Array.isArray(firstPage.jobs) ? [...firstPage.jobs] : [];
-    const total = Number(firstPage.total_count) || jobs.length;
+    if (!firstPage || !Array.isArray(firstPage.jobs) ||
+        !Number.isSafeInteger(firstPage.total_count) || firstPage.total_count < firstPage.jobs.length) {
+      throw new Error('Unexpected GitHub API response: invalid job collection.');
+    }
+    const jobs = [...firstPage.jobs];
+    const total = firstPage.total_count;
     const additionalPages = Math.min(Math.ceil(total / 100), 5);
     for (let page = 2; page <= additionalPages; page++) {
       const payload = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=${page}`, token, fetchImpl);
-      jobs.push(...(Array.isArray(payload.jobs) ? payload.jobs : []));
+      if (!payload || !Array.isArray(payload.jobs)) {
+        throw new Error('Unexpected GitHub API response: invalid job page.');
+      }
+      jobs.push(...payload.jobs);
     }
     if (total > jobs.length) truncated = true;
     jobsByRun.set(run.id, jobs);
@@ -178,11 +204,10 @@ export async function auditRepository({ repository, token, limit = 30, since, fe
   return {
     ...summarizeRuns(repository, runs, jobsByRun),
     ...(since ? { since } : {}),
-    sample_warning: truncated
-      ? 'Some runs contain more than 500 jobs; sampled job durations are incomplete.'
-      : runs.length === limit
-        ? 'The sample may exclude older runs; this is not an account-wide monthly report.'
-        : null,
+    sample_warning: [
+      ...(truncated ? ['Some runs contain more than 500 jobs; sampled job durations are incomplete.'] : []),
+      ...(runs.length === limit ? ['The sample may exclude older runs; this is not an account-wide monthly report.'] : []),
+    ].join(' ') || null,
   };
 }
 
@@ -233,7 +258,7 @@ async function main() {
     if (options.json) return console.log(JSON.stringify(data, null, 2));
     if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
     console.log(`# GitHub Actions audit: ${data.repository}`);
-    console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
+    console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     console.log(`NOTE: ${data.metric_note}`);
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
     for (const w of data.workflows) {
