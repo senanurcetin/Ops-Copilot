@@ -12,6 +12,7 @@ import {
   validateDateRange,
   createdDateFilter,
   createPublicGithubCache,
+  parseRetryAfter,
   validateRepository,
   validateEvent,
   validateStatus,
@@ -718,4 +719,57 @@ test('legacy mocks without a total_count retain explicitly uncertain coverage', 
   });
   assert.equal(result.total_matching_runs, undefined);
   assert.match(result.sample_warning, /API match count was unavailable/);
+});
+
+
+test('Retry-After parser handles seconds and RFC-style HTTP dates', () => {
+  const base = Date.parse('2026-10-12T12:00:00Z');
+  assert.equal(parseRetryAfter(undefined, base), null);
+  assert.equal(parseRetryAfter(null, base), null);
+  assert.equal(parseRetryAfter('0', base), 0);
+  assert.equal(parseRetryAfter('3', base), 3000);
+  assert.equal(parseRetryAfter(' 2 ', base), 2000);
+  assert.equal(parseRetryAfter('Mon, 12 Oct 2026 12:00:02 GMT', base), 2000);
+  assert.equal(parseRetryAfter('Mon, 12 Oct 2026 11:59:59 GMT', base), 0);
+  assert.equal(parseRetryAfter('Mon, 12 Oct 2026 12:01:00 GMT', base), 60000);
+});
+
+test('malformed or huge Retry-After values fail closed', () => {
+  for (const value of ['', 'nope', '-1', '1e6', '99999999999999999999',
+    '20/10/2026', 'Wed, not-a-real-time GMT', true]) {
+    assert.equal(parseRetryAfter(value), Infinity);
+  }
+});
+
+test('GitHub HTTP-date Retry-After far in the future stops immediately', async () => {
+  let requests = 0;
+  const future = new Date(Date.now() + 3600000).toUTCString();
+  const fetchImpl = async () => {
+    requests++;
+    return {
+      ok: false,
+      status: 429,
+      headers: { get: name => name === 'retry-after' ? future : null },
+    };
+  };
+  await assert.rejects(auditRepository({
+    repository: 'a/b', fetchImpl,
+  }), /rate limit reached/);
+  assert.equal(requests, 1);
+});
+
+test('unparseable Retry-After does not bypass GitHub server throttling', async () => {
+  let requests = 0;
+  const fetchImpl = async () => {
+    requests++;
+    return {
+      ok: false,
+      status: 429,
+      headers: { get: name => name === 'retry-after' ? 'invalid-date' : null },
+    };
+  };
+  await assert.rejects(auditRepository({
+    repository: 'a/b', token: 'private-token', fetchImpl,
+  }), error => /HTTP 429/.test(error.message) && !error.message.includes('private-token'));
+  assert.equal(requests, 1);
 });
