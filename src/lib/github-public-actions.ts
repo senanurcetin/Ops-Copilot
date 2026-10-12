@@ -37,14 +37,14 @@ export function summarizePublicActions(repository: string, payload: unknown): Pu
     throw new Error('Unexpected GitHub API response.');
   }
   const data = payload as { total_count?: unknown; workflow_runs?: unknown };
-  if (!Number.isSafeInteger(data.total_count) || (data.total_count as number) < 0 ||
+  if (typeof data.total_count !== 'number' || !Number.isSafeInteger(data.total_count) || data.total_count < 0 ||
       !Array.isArray(data.workflow_runs)) {
     throw new Error('Unexpected GitHub API response.');
   }
   const runs: PublicWorkflowRun[] = data.workflow_runs.slice(0, 10).map((item: unknown) => {
     if (!item || typeof item !== 'object') throw new Error('Invalid workflow run.');
     const run = item as Partial<PublicWorkflowRun>;
-    if (!Number.isSafeInteger(run.id) || typeof run.name !== 'string' ||
+    if (typeof run.id !== 'number' || !Number.isSafeInteger(run.id) || typeof run.name !== 'string' ||
         typeof run.status !== 'string' || typeof run.event !== 'string' ||
         (run.conclusion !== null && typeof run.conclusion !== 'string') ||
         typeof run.created_at !== 'string' || typeof run.html_url !== 'string') {
