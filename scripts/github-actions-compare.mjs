@@ -10,8 +10,8 @@ import { auditRepository, validateRepository, validateSinceDate } from './github
 export const MAX_REPOSITORIES = 5;
 export const COMPARISON_NOTE =
   'Observed elapsed job-minutes are sampled diagnostics, NOT GitHub billed minutes, cost, ' +
-  'account-wide usage or a normalized performance ranking. Repositories can have ' +
-  'different run frequencies, job complexity, and omitted older runs.';
+  'or account-wide usage. Repositories can have different run frequencies, job ' +
+  'complexity and omitted older runs; this is not a normalized performance ranking.';
 
 function validateRepositories(repositories) {
   if (!Array.isArray(repositories) || repositories.length < 2 ||
