@@ -258,7 +258,7 @@ async function main() {
     if (options.json) return console.log(JSON.stringify(data, null, 2));
     if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
     console.log(`# GitHub Actions audit: ${data.repository}`);
-    console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
+    console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     console.log(`NOTE: ${data.metric_note}`);
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
     for (const w of data.workflows) {
