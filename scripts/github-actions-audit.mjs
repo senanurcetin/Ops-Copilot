@@ -155,9 +155,9 @@ export async function auditRepository({ repository, token, limit = 30, since, fe
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be an integer from 1 to 100.');
   }
-  const prefix = \`/repos/\${encodeURIComponent(owner)}/\${encodeURIComponent(repo)}\`;
+  const prefix = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
   const dateFilter = since ? '&created=' + encodeURIComponent('>=' + validateSinceDate(since)) : '';
-  const runsResult = await getJson(\`\${prefix}/actions/runs?per_page=\${limit}&page=1\${dateFilter}\`, token, fetchImpl);
+  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}`, token, fetchImpl);
   const runs = Array.isArray(runsResult.workflow_runs) ? runsResult.workflow_runs.slice(0, limit) : [];
   const jobsByRun = new Map();
   let truncated = false;
