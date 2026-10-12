@@ -15,13 +15,14 @@ test('standalone package includes only two working CLI bins, documentation and l
   try {
     assert.equal(await buildPackage({ destination }), destination);
     const names = (await readdir(destination)).sort();
-    assert.deepEqual(names, ['LICENSE', 'README.md', 'bin', 'package.json']);
+    assert.deepEqual(names, ['CHANGELOG.md', 'LICENSE', 'README.md', 'bin', 'package.json']);
     assert.deepEqual((await readdir(join(destination, 'bin'))).sort(), [
       'github-actions-audit.mjs', 'github-actions-compare.mjs',
     ]);
     const manifest = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'));
     assert.equal(manifest.name, '@senanurcetin/github-actions-auditor');
     assert.equal(manifest.version, '0.1.0');
+    assert.match(await readFile(join(destination, 'CHANGELOG.md'), 'utf8'), /\\[0\\.1\\.0\\]/);
     assert.equal(manifest.license, 'MIT');
     assert.equal(Object.keys(manifest.dependencies || {}).length, 0);
     assert.equal(manifest.bin['github-actions-audit'], './bin/github-actions-audit.mjs');
