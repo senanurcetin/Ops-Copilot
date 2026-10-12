@@ -25,7 +25,10 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --branch main --limit 50 --markdown > actions-review.md
-node --test tests/github-actions-audit.test.mjs
+node --test tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs
+
+# Compare 2–5 repositories (one read-only query sequence per repository)
+node scripts/github-actions-compare.mjs senanurcetin/Ops-Copilot senanurcetin/ot-sentinel --since 2026-10-01 --limit 10 --markdown
 ```
 
 For a private repository, export a token in your local environment (never commit or paste it into tickets):
