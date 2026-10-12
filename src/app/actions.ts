@@ -3,6 +3,7 @@
 import { obtainAnswersFromDocuments } from '@/ai/flows/obtain-answers-from-documents';
 import { searchDocuments, replaceSampleDocuments, getKnowledgeBaseStats, type Document } from '@/services/vector-store';
 import { parseSampleKnowledgeBase } from '@/server/sample-knowledge-base';
+import { parseChecklistProgress } from '@/server/checklist-progress';
 import { SessionAuthError, requireCurrentSessionUser } from '@/server/auth-session';
 import { getAdminDb } from '@/server/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -91,16 +92,17 @@ export async function logChecklistProgress(input: {
 }) {
   try {
     const sessionUser = await requireCurrentSessionUser();
+    const progress = parseChecklistProgress(input);
 
     await getAdminDb()
       .collection('users')
       .doc(sessionUser.uid)
       .collection('checklistLogs')
       .add({
-        documentId: input.documentId,
-        documentTitle: input.documentTitle,
-        completedSteps: input.completedSteps,
-        completedStepCount: input.completedSteps.length,
+        documentId: progress.documentId,
+        documentTitle: progress.documentTitle,
+        completedSteps: progress.completedSteps,
+        completedStepCount: progress.completedSteps.length,
         createdAt: FieldValue.serverTimestamp(),
       });
 
