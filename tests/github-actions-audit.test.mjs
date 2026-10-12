@@ -199,8 +199,8 @@ test('pagination includes every job when GitHub splits results over multiple pag
     calls.push(url);
     let body;
     if (url.includes('/actions/runs?')) body = { workflow_runs: [{ id: 3, name: 'CI' }] };
-    else if (url.includes('page=1')) body = { total_count: 101, jobs: Array(100).fill(oneMinute) };
-    else if (url.includes('page=2')) body = { total_count: 101, jobs: [oneMinute] };
+    else if (url.endsWith('&page=1')) body = { total_count: 101, jobs: Array(100).fill(oneMinute) };
+    else if (url.endsWith('&page=2')) body = { total_count: 101, jobs: [oneMinute] };
     else throw new Error('Unexpected page');
     return { ok: true, json: async () => body };
   };
@@ -216,7 +216,7 @@ test('bad pagination data fails closed instead of dropping job time', async () =
     ok: true,
     json: async () => url.includes('/actions/runs?')
       ? { workflow_runs: [{ id: 3, name: 'CI' }] }
-      : url.includes('page=1')
+      : url.endsWith('&page=1')
         ? { total_count: 101, jobs: Array(100).fill({}) }
         : { jobs: null },
   });
