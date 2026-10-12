@@ -97,6 +97,8 @@ export function renderMarkdownReport(report) {
     '# GitHub Actions report: ' + escapeMarkdown(report.repository),
     '',
     '- Recent runs inspected: **' + report.inspected_runs + '**',
+    ...(report.total_matching_runs !== undefined ?
+      ['- Runs matching the GitHub API query: **' + report.total_matching_runs + '**'] : []),
     '- Completed jobs: **' + report.completed_jobs + '**',
     '- Jobs without valid completed timestamps: **' + report.incomplete_jobs + '**',
     '- Elapsed job-minutes in this sample: **' + report.elapsed_job_minutes + '**',
@@ -300,6 +302,14 @@ export async function auditRepository({ repository, token, limit = 30, since, un
   if (!runsResult || !Array.isArray(runsResult.workflow_runs)) {
     throw new Error('Unexpected GitHub API response: workflow_runs must be an array.');
   }
+  // GitHub provides total_count for matching workflow runs. Some synthetic
+  // and legacy fixtures omit it, so retain a cautious unknown-coverage mode.
+  const totalMatches = runsResult.total_count;
+  if (totalMatches !== undefined &&
+      (!Number.isSafeInteger(totalMatches) || totalMatches < 0 ||
+        totalMatches < runsResult.workflow_runs.length)) {
+    throw new Error('Unexpected GitHub API response: invalid workflow run total_count.');
+  }
   const runs = runsResult.workflow_runs.slice(0, limit);
   const jobsByRun = new Map();
   let truncated = false;
@@ -340,6 +350,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
   }
   return {
     ...summarizeRuns(repository, runs, jobsByRun),
+    ...(totalMatches !== undefined ? { total_matching_runs: totalMatches } : {}),
     ...(since ? { since } : {}),
     ...(until ? { until } : {}),
     ...(branch ? { branch } : {}),
@@ -347,7 +358,12 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     ...(status ? { status } : {}),
     sample_warning: [
       ...(truncated ? ['Some runs contain more than 500 jobs; sampled job durations are incomplete.'] : []),
-      ...(runs.length === limit ? ['The sample may exclude older runs; this is not an account-wide monthly report.'] : []),
+      ...(totalMatches !== undefined && totalMatches > runs.length
+        ? ['Only ' + runs.length + ' of ' + totalMatches +
+            ' matching workflow runs were sampled; the results are not an account-wide monthly report.']
+        : totalMatches === undefined && runs.length === limit
+          ? ['The sample may exclude older runs; the API match count was unavailable. This is not an account-wide monthly report.']
+          : []),
     ].join(' ') || null,
   };
 }
@@ -418,6 +434,7 @@ async function main() {
     if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
     console.log(`# GitHub Actions audit: ${data.repository}`);
     console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
+    if (data.total_matching_runs !== undefined) console.log(`Runs matching GitHub API query: ${data.total_matching_runs}`);
     console.log(`NOTE: ${data.metric_note}`);
     if (data.since) console.log(`Created since (UTC): ${data.since}`);
     if (data.until) console.log(`Created until (UTC): ${data.until}`);

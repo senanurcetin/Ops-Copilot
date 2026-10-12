@@ -97,12 +97,16 @@ export async function compareRepositories({
         !Number.isFinite(report.elapsed_job_minutes) ||
         !Number.isSafeInteger(report.inspected_runs) || report.inspected_runs < 0 ||
         !Number.isSafeInteger(report.completed_jobs) || report.completed_jobs < 0 ||
-        !Number.isSafeInteger(report.incomplete_jobs) || report.incomplete_jobs < 0) {
+        !Number.isSafeInteger(report.incomplete_jobs) || report.incomplete_jobs < 0 ||
+        (report.total_matching_runs !== undefined &&
+          (!Number.isSafeInteger(report.total_matching_runs) ||
+           report.total_matching_runs < report.inspected_runs))) {
       throw new Error('Unexpected audit result for ' + repository + '.');
     }
     records.push({
       repository,
       inspected_runs: report.inspected_runs,
+      ...(report.total_matching_runs !== undefined ? { total_matching_runs: report.total_matching_runs } : {}),
       failed_runs: report.workflows.reduce((sum, w) => sum + w.failures, 0),
       scheduled_runs: report.workflows.reduce((sum, w) => sum + w.scheduled, 0),
       completed_jobs: report.completed_jobs,
@@ -147,12 +151,13 @@ export function renderComparisonMarkdown(report) {
     '',
     '> ' + report.comparison_note,
     '',
-    '| Repository | Runs | Failures | Scheduled | Completed jobs | Incomplete jobs | Elapsed job-minutes |',
-    '| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Repository | Runs | Failures | Scheduled | Completed jobs | Incomplete jobs | Elapsed job-minutes | API matches |',
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ...report.repositories.map(r => '| ' + escapeMarkdown(r.repository) +
       ' | ' + r.inspected_runs + ' | ' + r.failed_runs + ' | ' + r.scheduled_runs +
       ' | ' + r.completed_jobs + ' | ' + r.incomplete_jobs +
-      ' | ' + r.elapsed_job_minutes + ' |'),
+      ' | ' + r.elapsed_job_minutes + ' | ' +
+      (r.total_matching_runs === undefined ? 'unknown' : r.total_matching_runs) + ' |'),
     '',
   ];
   const warnings = report.repositories.filter(r => r.sample_warning);
@@ -198,8 +203,9 @@ async function main() {
       (report.status ? ' | status ' + report.status : ''));
     console.log(report.comparison_note);
     for (const record of report.repositories) {
-      console.log('- ' + record.repository + ': ' + record.inspected_runs + ' runs; ' +
-        record.failed_runs + ' failures; ' + record.elapsed_job_minutes +
+      console.log('- ' + record.repository + ': ' + record.inspected_runs + ' runs' +
+        (record.total_matching_runs === undefined ? ' (total unknown)' : ' of ' + record.total_matching_runs + ' API matches') +
+        '; ' + record.failed_runs + ' failures; ' + record.elapsed_job_minutes +
         ' elapsed job-minutes' + (record.sample_warning ? ' [sample limited]' : ''));
     }
   } catch (error) {

@@ -647,3 +647,75 @@ test('large Retry-After stops rather than hammering GitHub or disclosing a token
   }), error => /rate limit reached/i.test(error.message) && !error.message.includes('private-token'));
   assert.equal(calls, 1);
 });
+
+
+test('API matching count exposes a precisely bounded workflow sample', async () => {
+  const urls = [];
+  const fetchImpl = async url => {
+    urls.push(url);
+    return { ok: true, json: async () => url.includes('/actions/runs?')
+      ? { total_count: 25, workflow_runs: [
+          { id: 101, workflow_id: 9, name: 'CI', conclusion: 'success' },
+          { id: 102, workflow_id: 9, name: 'CI', conclusion: 'failure' },
+        ] }
+      : { total_count: 0, jobs: [] } };
+  };
+  const result = await auditRepository({ repository: 'a/b', limit: 2, fetchImpl });
+  assert.equal(urls.length, 3);
+  assert.equal(result.inspected_runs, 2);
+  assert.equal(result.total_matching_runs, 25);
+  assert.match(result.sample_warning, /Only 2 of 25 matching workflow runs were sampled/);
+  assert.match(renderMarkdownReport(result), /Runs matching the GitHub API query: \*\*25\*\*/);
+});
+
+test('a complete API sample is not mislabeled as truncated when at its limit', async () => {
+  const fetchImpl = async url => ({
+    ok: true,
+    json: async () => url.includes('/actions/runs?')
+      ? { total_count: 2, workflow_runs: [{ id: 3, name: 'Build' }, { id: 4, name: 'Build' }] }
+      : { total_count: 0, jobs: [] },
+  });
+  const result = await auditRepository({ repository: 'a/b', limit: 2, fetchImpl });
+  assert.equal(result.total_matching_runs, 2);
+  assert.equal(result.sample_warning, null);
+  assert.equal(result.inspected_runs, 2);
+});
+
+test('zero total matches are reported explicitly without invented activity', async () => {
+  const result = await auditRepository({
+    repository: 'a/b',
+    fetchImpl: async () => ({ ok: true, json: async () => ({
+      total_count: 0, workflow_runs: [],
+    }) }),
+  });
+  assert.equal(result.inspected_runs, 0);
+  assert.equal(result.total_matching_runs, 0);
+  assert.equal(result.sample_warning, null);
+});
+
+test('invalid GitHub workflow match counts are rejected before job queries', async () => {
+  for (const total_count of [-1, 1.5, '2', null, 0]) {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls++;
+      return { ok: true, json: async () => ({
+        total_count, workflow_runs: [{ id: 77, name: 'CI' }],
+      }) };
+    };
+    await assert.rejects(auditRepository({ repository: 'a/b', fetchImpl }),
+      /invalid workflow run total_count/);
+    assert.equal(calls, 1);
+  }
+});
+
+test('legacy mocks without a total_count retain explicitly uncertain coverage', async () => {
+  const result = await auditRepository({
+    repository: 'a/b', limit: 1,
+    fetchImpl: async url => ({ ok: true, json: async () =>
+      url.includes('/actions/runs?')
+        ? { workflow_runs: [{ id: 6, name: 'CI' }] }
+        : { total_count: 0, jobs: [] } }),
+  });
+  assert.equal(result.total_matching_runs, undefined);
+  assert.match(result.sample_warning, /API match count was unavailable/);
+});
