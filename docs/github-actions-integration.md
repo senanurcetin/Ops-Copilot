@@ -44,6 +44,9 @@ The script is platform-agnostic except for the shell-specific `export` example; 
 - `elapsed_job_minutes` is the sum of `completed_at - started_at` for sampled jobs, rounded to one decimal.
 - **It is not GitHub's billed minutes**, nor an account-level billing statement. Job time excludes incomplete jobs. Runner multipliers, OS-specific rates, storage, cached artifact usage, and additional account activity are not modeled.
 - A maximum of 100 recent runs can be inspected; at most 500 jobs per run are sampled. The report flags truncated results.
+- Jobs without usable start/end timestamps (including malformed or reversed timestamps) are counted separately as `incomplete_jobs`, **not** as completed zero-minute jobs. Genuine zero-minute jobs remain valid.
+- Malformed GitHub API collections or unexpected JSON responses cause the command to **fail explicitly**, rather than incorrectly displaying an empty successful report.
+- A rate-limited response is reported with safe retry guidance. HTTP failures never print token values. A JSON or Markdown report is not produced after API validation fails.
 - `--since YYYY-MM-DD` uses GitHub's documented `created` workflow-run filter (inclusive lower bound, UTC). It scopes the API query **before** sampling; it does not promise complete historical coverage if more than `--limit` runs match.
 - `--markdown` renders a deterministic, escaped Markdown summary you can save or attach to an engineering review. It cannot be combined with `--json`.
 - Generated Markdown includes sampled run counts, failures, scheduled triggers, runtime estimates and recommendations. Treat it as diagnostic evidence rather than an exact bill.
