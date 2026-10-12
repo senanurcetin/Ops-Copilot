@@ -10,9 +10,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
-    "test": "node --import tsx --test tests/document-ranking.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs",
-    "test:ci": "node --import tsx --test tests/document-ranking.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs",
-    "test:unit": "node --import tsx --test tests/document-ranking.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs",
+    "test": "node --import tsx --test tests/document-ranking.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs",
+    "test:ci": "node --import tsx --test tests/document-ranking.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs",
+    "test:unit": "node --import tsx --test tests/document-ranking.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:debug": "playwright test --debug",
@@ -23,7 +23,9 @@
     "case-study:refresh": "python analysis/run_secom_case_study.py",
     "audit:github-actions": "node scripts/github-actions-audit.mjs",
     "test:github-actions-audit": "node --test tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs",
-    "audit:github-actions-compare": "node scripts/github-actions-compare.mjs"
+    "audit:github-actions-compare": "node scripts/github-actions-compare.mjs",
+    "auditor:package": "node scripts/build-github-auditor-package.mjs",
+    "auditor:pack:dry-run": "npm run auditor:package && npm pack --dry-run ./dist/github-actions-auditor"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",

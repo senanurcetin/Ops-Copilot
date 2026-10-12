@@ -1,0 +1,43 @@
+{
+  "name": "@senanurcetin/github-actions-auditor",
+  "version": "0.1.0",
+  "description": "Read-only GitHub Actions REST API workflow auditor and repository comparison CLI",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "github-actions-audit": "./bin/github-actions-audit.mjs",
+    "github-actions-compare": "./bin/github-actions-compare.mjs"
+  },
+  "exports": {
+    ".": "./bin/github-actions-audit.mjs",
+    "./compare": "./bin/github-actions-compare.mjs"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/senanurcetin/Ops-Copilot.git",
+    "directory": "tools/github-actions-auditor"
+  },
+  "homepage": "https://github.com/senanurcetin/Ops-Copilot/tree/main/tools/github-actions-auditor",
+  "bugs": {
+    "url": "https://github.com/senanurcetin/Ops-Copilot/issues"
+  },
+  "keywords": [
+    "github",
+    "github-actions",
+    "developer-tools",
+    "audit",
+    "workflow",
+    "read-only"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
