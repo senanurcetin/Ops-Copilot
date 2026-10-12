@@ -57,6 +57,7 @@ npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 - Accepts **2–5 distinct repositories**, validates each `owner/name` input, and uses **up to 10 recent runs per repository by default** (maximum 100). Calls are sequential to avoid unnecessary API bursts.
 - Reports sampled run counts, failed/scheduled runs, completed/incomplete jobs, elapsed job-minutes, and per-repository sampling warnings.
 - If any repository cannot be read, the command **fails without emitting a partial JSON/Markdown result**. Private repositories need an appropriately scoped Actions-read token.
+- `--since YYYY-MM-DD` and `--until YYYY-MM-DD` define the same **inclusive UTC calendar-day range** for every compared repository. Either boundary can be used alone; a reversed date range fails before any API requests. GitHub's `created` search filter applies **before** the existing per-repository sample cap. Date-limited results are still not account-wide billing totals.
 - Same `--since YYYY-MM-DD` UTC lower bound applies to each repository. `--branch` is deliberately not available on the cross-repository command, because different repos may use different default branches; compare their unfiltered runs instead or use the single-repo auditor with explicit branches.
 - Sorting only makes the sample easier to read. Comparing observed job-minutes across repositories is **not a normalized efficiency score, budget total, or spend ranking**: workflows, activity levels, job complexity and sample truncation differ.
 
