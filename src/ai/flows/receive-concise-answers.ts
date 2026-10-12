@@ -1,5 +1,8 @@
 // This is a server-side file.
-'use server';
+// Internal server module only. Do not use a file-level 'use server' directive:
+// that turns exported helpers accepting caller-supplied context/user IDs into
+// directly invocable Next.js Server Actions. Only src/app/actions.ts exposes
+// authenticated public actions.
 
 /**
  * @fileOverview Defines the flow for receiving concise and relevant answers from the chat agent.
