@@ -67,6 +67,10 @@ node --test tests/github-actions-package.test.mjs
 
 The builder copies the maintained read-only API modules, README and MIT license into an ignored staging directory. This is a reproducible **release candidate only**; it does not imply a published npm package or Developer Program membership. See [standalone package instructions](tools/github-actions-auditor/README.md).
 
+## Optional GitHub App installation authentication
+
+A [least-privilege GitHub App authentication scaffold](docs/github-app-integration.md) is available for local read-only audits of selected private repositories. The local CLI signs an RS256 JWT from a private key kept outside the repository and exchanges it for an installation token restricted to one repository with `Actions: read`. **No GitHub App has been created or installed automatically.** Registration and private-key provisioning remain the account owner's responsibility.
+
 ## Architecture snapshot
 
 - **Frontend:** Next.js App Router, React 19, Tailwind CSS, ShadCN UI
