@@ -41,7 +41,7 @@ node --test tests/github-actions-audit.test.mjs
 ```
 
 It supports private repositories with an optional read-only `GH_TOKEN`. Add `--since YYYY-MM-DD` to select recent runs, or `--markdown` to produce a review-ready report without using a GitHub Actions runner. Reported elapsed job-minutes are **not billed minutes**.
-The auditor distinguishes workflows by stable GitHub workflow IDs even when several files share the same display name, avoiding misleading aggregate statistics.
+The auditor distinguishes workflows by stable GitHub workflow IDs even when several files share the same display name, avoiding misleading aggregate statistics. It also supports `--branch main` (or a feature branch) to analyze only workflow runs associated with the selected branch.
 
 **Review the working GitHub API integration:** [reproducible demo with real public API evidence](docs/github-api-live-demo.md) · [Developer Program application details](docs/github-developer-program-application.md). See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
 
