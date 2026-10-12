@@ -56,6 +56,10 @@ The script is platform-agnostic except for the shell-specific `export` example; 
 
 Integration repository: https://github.com/senanurcetin/Ops-Copilot
 
+Reproducible public API demonstration: [github-api-live-demo.md](github-api-live-demo.md)
+
+Developer Program eligibility and submission evidence: [github-developer-program-application.md](github-developer-program-application.md)
+
 Project support: **senanur.cetin.work@gmail.com**
 
 Issues: https://github.com/senanurcetin/Ops-Copilot/issues
