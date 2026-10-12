@@ -31,6 +31,17 @@ Industrial troubleshooting often breaks down when operators must search scattere
 - Converts procedural answers into interactive checklists and stores progress logs for later review.
 - Includes a reproducible manufacturing failure-risk case study with Python analysis, model artifacts, and SQL monitoring queries.
 
+## GitHub Actions REST API integration
+
+Ops-Copilot also includes a standalone, **read-only GitHub API integration** for diagnosing CI workflow usage. It retrieves workflow runs and job timings, ranks time-consuming workflows and suggests optimization candidates without making changes or using Actions runner minutes locally.
+
+```bash
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
+node --test tests/github-actions-audit.test.mjs
+```
+
+It supports private repositories with an optional read-only `GH_TOKEN`. Reported elapsed job-minutes are **not billed minutes**. See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
+
 ## Architecture snapshot
 
 - **Frontend:** Next.js App Router, React 19, Tailwind CSS, ShadCN UI
