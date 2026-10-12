@@ -82,3 +82,63 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* 2026 industrial AI dashboard refresh.
+   Visual only: Firestore permissions, messages and model routing are unchanged. */
+.ops-workspace {
+  --ops-ink: #0b2534;
+  --ops-teal: #4cccb6;
+  background: #eaf4f5;
+  color: #183344;
+}
+.ops-workspace [data-sidebar="sidebar"] {
+  background: linear-gradient(160deg, #0b2232, #123e44 68%, #0d2b42) !important;
+  color: #effffa;
+  border-color: #22575e;
+}
+.ops-workspace .ops-brand-icon {
+  background: linear-gradient(145deg, #168d85, #157ea3);
+  border-radius: 13px;
+  box-shadow: 0 8px 19px rgba(6, 56, 65, .27);
+}
+.ops-shell {
+  background:
+    radial-gradient(circle at 92% 0, rgba(62, 178, 170, .11), transparent 30%),
+    #f2f8f8 !important;
+}
+.ops-topbar {
+  background: linear-gradient(110deg, #0a2839, #14525b 63%, #174c6c) !important;
+  border-bottom: 1px solid #2d7178 !important;
+  box-shadow: 0 8px 28px rgba(5, 40, 55, .14);
+}
+.ops-topbar h1 {
+  color: #f2fffc;
+  font-weight: 800;
+  letter-spacing: -.035em;
+  font-size: clamp(1rem, 1.9vw, 1.45rem);
+}
+.ops-topbar button {
+  color: #d9f7ef;
+  border-color: rgba(191, 254, 238, .24) !important;
+}
+.ops-topbar button:hover { color: #ffffff; background: rgba(226,255,247,.12); }
+.ops-healthbar {
+  background: #e6f5f2 !important;
+  border-color: #bfe2d8 !important;
+}
+.ops-healthbar > div > div { flex-wrap: wrap; min-height: 48px; height: auto; gap: .6rem 1.8rem; padding-block: .55rem; }
+.ops-healthbar svg { color: #158a79; }
+.ops-main {
+  min-width: 0;
+  border-top: 1px solid rgba(21, 116, 125, .1);
+}
+.ops-main input:focus-visible, .ops-main button:focus-visible {
+  outline: 3px solid #2ab99f;
+  outline-offset: 2px;
+}
+@media(max-width:700px) {
+  .ops-topbar { padding-inline: .75rem; gap: .65rem; }
+  .ops-topbar h1 { font-size: 1rem; line-height: 1.2; }
+  .ops-healthbar > div > div { gap: .4rem 1rem; }
+}

@@ -174,14 +174,14 @@ export function OpsDashboard() {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex min-h-screen bg-slate-50">
+      <div className="ops-workspace flex min-h-screen bg-slate-50">
         <Sidebar
           collapsible="icon"
           className={cn('group-data-[variant=sidebar]:bg-slate-900 text-white border-r border-slate-700')}
         >
           <SidebarHeader>
             <div className="flex items-center gap-3 p-2">
-              <div className="bg-indigo-600 p-2 rounded-lg">
+              <div className="ops-brand-icon bg-indigo-600 p-2 rounded-lg">
                 <Bot className="h-6 w-6 text-white" />
               </div>
               <h1 className="text-xl font-bold group-data-[collapsible=icon]:hidden">Ops-Copilot</h1>
@@ -215,9 +215,9 @@ export function OpsDashboard() {
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset className="bg-slate-50 !p-0 !m-0">
+        <SidebarInset className="ops-shell bg-slate-50 !p-0 !m-0">
           <div className="flex flex-col h-screen">
-            <header className="sticky top-0 z-10 flex h-[65px] items-center justify-between border-b bg-white px-4">
+            <header className="ops-topbar sticky top-0 z-10 flex h-[65px] items-center justify-between border-b bg-white px-4">
               <div className="flex items-center gap-4">
                 <SidebarTrigger className="md:hidden" />
                 <h1 className="text-xl font-bold">Industrial Operator Dashboard</h1>
@@ -236,7 +236,7 @@ export function OpsDashboard() {
               </div>
             </header>
             <SystemHealthBar />
-            <main className="flex-1 flex overflow-hidden">
+            <main className="ops-main flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col">
                 <ChatInterface
                   messages={messages}
