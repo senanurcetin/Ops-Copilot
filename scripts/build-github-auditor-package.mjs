@@ -20,7 +20,11 @@ export async function buildPackage({ destination = outputDirectory, repositoryRo
     !tempRelative.startsWith('..' + sep) && !isAbsolute(tempRelative) &&
     tempRelative.split(sep).length >= 2;
   const managed = output === managedOutput;
-  if (!managed && !insideTempSubfolder) {
+  const sourceRelative = relative(sourceRoot, output);
+  const insideSource = sourceRelative === '' ||
+    (sourceRelative !== '..' && !sourceRelative.startsWith('..' + sep) &&
+      !isAbsolute(sourceRelative));
+  if (!managed && (insideSource || !insideTempSubfolder)) {
     throw new Error('Refusing to overwrite repository sources or arbitrary output paths.');
   }
   if (managed) {
