@@ -25,7 +25,10 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --branch main --limit 50 --markdown > actions-review.md
-node --test tests/github-actions-audit.test.mjs
+node --test tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs
+
+# Compare 2–5 repositories (one read-only query sequence per repository)
+node scripts/github-actions-compare.mjs senanurcetin/Ops-Copilot senanurcetin/ot-sentinel --since 2026-10-01 --limit 10 --markdown
 ```
 
 For a private repository, export a token in your local environment (never commit or paste it into tickets):
@@ -38,6 +41,22 @@ node scripts/github-actions-audit.mjs OWNER/PRIVATE_REPO --limit 20
 **Minimum token access:** select only the repositories being audited and grant `Actions: read`. Keep the token out of the command arguments so it does not show up in shell history. For private repos, the token owner also needs access.
 
 The script is platform-agnostic except for the shell-specific `export` example; on PowerShell use `$env:GH_TOKEN = "..." ` instead.
+
+## Comparing repositories (without triggering Actions)
+
+The independent comparison CLI uses the same read-only GitHub REST API client as the single-repository auditor:
+
+```bash
+node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --json
+node scripts/github-actions-compare.mjs owner/one owner/two --since 2026-10-01 --markdown > comparison.md
+npm run audit:github-actions-compare -- owner/one owner/two --limit 5
+```
+
+- Accepts **2–5 distinct repositories**, validates each `owner/name` input, and uses **up to 10 recent runs per repository by default** (maximum 100). Calls are sequential to avoid unnecessary API bursts.
+- Reports sampled run counts, failed/scheduled runs, completed/incomplete jobs, elapsed job-minutes, and per-repository sampling warnings.
+- If any repository cannot be read, the command **fails without emitting a partial JSON/Markdown result**. Private repositories need an appropriately scoped Actions-read token.
+- Same `--since YYYY-MM-DD` UTC lower bound applies to each repository. `--branch` is deliberately not available on the cross-repository command, because different repos may use different default branches; compare their unfiltered runs instead or use the single-repo auditor with explicit branches.
+- Sorting only makes the sample easier to read. Comparing observed job-minutes across repositories is **not a normalized efficiency score, budget total, or spend ranking**: workflows, activity levels, job complexity and sample truncation differ.
 
 ## Report semantics and limits
 
