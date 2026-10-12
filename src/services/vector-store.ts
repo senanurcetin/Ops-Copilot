@@ -55,35 +55,38 @@ export async function storeDocuments(userId: string, docs: Document[]): Promise<
 }
 
 /**
- * Atomically replace the small, bundled demo knowledge base.
+ * Replace the demo knowledge base using a Firestore transaction.
  *
- * Do not clear the old collection before verifying the replacement: parsing,
- * validation, read, write-limit or commit failures must retain prior data.
- * Firestore's batch commit applies the deletes and writes atomically.
+ * The existing-document query and all mutations run in the same transaction,
+ * so an optimistic retry can detect changes to documents read during planning.
+ * All reads happen before writes. Input parsing takes place in the caller.
+ * This does not coordinate with other write paths that do not use this query.
  */
 export async function replaceSampleDocuments(
   userId: string,
   documents: KnowledgeDocument[],
 ): Promise<void> {
-  const collection = getKnowledgeCollection(userId);
-  const existing = await collection.get();
-  const { obsoleteIds } = planKnowledgeBaseReplacement(
-    existing.docs.map(doc => doc.id), documents,
-  );
+  const db = getAdminDb();
+  const collection = db.collection('users').doc(userId).collection('knowledgeDocuments');
 
-  const batch = getAdminDb().batch();
-  for (const id of obsoleteIds) {
-    batch.delete(collection.doc(id));
-  }
-  for (const doc of documents) {
-    batch.set(collection.doc(doc.id), {
-      id: doc.id,
-      title: doc.title,
-      content: doc.content,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-  }
-  await batch.commit();
+  await db.runTransaction(async transaction => {
+    const existing = await transaction.get(collection);
+    const { obsoleteIds } = planKnowledgeBaseReplacement(
+      existing.docs.map(doc => doc.id), documents,
+    );
+
+    for (const id of obsoleteIds) {
+      transaction.delete(collection.doc(id));
+    }
+    for (const doc of documents) {
+      transaction.set(collection.doc(doc.id), {
+        id: doc.id,
+        title: doc.title,
+        content: doc.content,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  });
 }
 
 /**
