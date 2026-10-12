@@ -42,6 +42,22 @@ node scripts/github-actions-audit.mjs OWNER/PRIVATE_REPO --limit 20
 
 The script is platform-agnostic except for the shell-specific `export` example; on PowerShell use `$env:GH_TOKEN = "..." ` instead.
 
+## Comparing repositories (without triggering Actions)
+
+The independent comparison CLI uses the same read-only GitHub REST API client as the single-repository auditor:
+
+```bash
+node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --json
+node scripts/github-actions-compare.mjs owner/one owner/two --since 2026-10-01 --markdown > comparison.md
+npm run audit:github-actions-compare -- owner/one owner/two --limit 5
+```
+
+- Accepts **2–5 distinct repositories**, validates each `owner/name` input, and uses **up to 10 recent runs per repository by default** (maximum 100). Calls are sequential to avoid unnecessary API bursts.
+- Reports sampled run counts, failed/scheduled runs, completed/incomplete jobs, elapsed job-minutes, and per-repository sampling warnings.
+- If any repository cannot be read, the command **fails without emitting a partial JSON/Markdown result**. Private repositories need an appropriately scoped Actions-read token.
+- Same `--since YYYY-MM-DD` UTC lower bound applies to each repository. `--branch` is deliberately not available on the cross-repository command, because different repos may use different default branches; compare their unfiltered runs instead or use the single-repo auditor with explicit branches.
+- Sorting only makes the sample easier to read. Comparing observed job-minutes across repositories is **not a normalized efficiency score, budget total, or spend ranking**: workflows, activity levels, job complexity and sample truncation differ.
+
 ## Report semantics and limits
 
 - `elapsed_job_minutes` is the sum of `completed_at - started_at` for sampled jobs, rounded to one decimal.
