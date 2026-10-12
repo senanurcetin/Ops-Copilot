@@ -84,3 +84,31 @@ test('authenticated upload action uses validation and atomic replacement, not cl
   assert.ok(fn.indexOf('parseSampleKnowledgeBase') < fn.indexOf('replaceSampleDocuments'));
   assert.doesNotMatch(fn, /clearDocuments/);
 });
+
+test('retry planning uses the latest transaction snapshot, not a stale deletion list', () => {
+  const initial = planKnowledgeBaseReplacement(['a', 'stale'], documents);
+  const retry = planKnowledgeBaseReplacement(['a', 'new-concurrent'], documents);
+  assert.deepEqual(initial.obsoleteIds, ['stale']);
+  assert.deepEqual(retry.obsoleteIds, ['new-concurrent']);
+  assert.deepEqual(retry.writeCount, 3);
+});
+
+test('sample replacement reads and plans inside Firestore transaction before writing', () => {
+  const code = readFileSync(new URL('../src/services/vector-store.ts', import.meta.url), 'utf8');
+  const fn = code.split('export async function replaceSampleDocuments(')[1]
+    ?.split('export async function searchDocuments(')[0];
+  assert.ok(fn, 'Expected sample replacement helper');
+  assert.match(fn, /await db\.runTransaction\(async transaction =>/);
+  assert.match(fn, /await transaction\.get\(collection\)/);
+  assert.match(fn, /planKnowledgeBaseReplacement\(/);
+  assert.match(fn, /transaction\.delete\(/);
+  assert.match(fn, /transaction\.set\(/);
+  assert.doesNotMatch(fn, /await collection\.get\(|batch\.commit\(/);
+
+  const read = fn.indexOf('await transaction.get(collection)');
+  const plan = fn.indexOf('planKnowledgeBaseReplacement(');
+  const remove = fn.indexOf('transaction.delete(');
+  const put = fn.indexOf('transaction.set(');
+  assert.ok(read >= 0 && read < plan && plan < remove && remove < put,
+    'Transaction must read and validate all changes before any mutations');
+});
