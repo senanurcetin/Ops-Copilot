@@ -68,6 +68,34 @@ The integration already meets the **technical description** of a public, in-deve
 
 The GitHub Developer Program's published eligibility rules do **not** require an npm package, production deployment, GitHub App registration, Marketplace listing or a particular number of upstream PRs. Do not delay an otherwise accurate membership application just to complete those optional milestones.
 
+## Five-minute pre-registration verification
+
+The core eligibility proof does not depend on npm publication or the unavailable web deployment. A reviewer can inspect the source and reproduce it directly:
+
+```bash
+git clone https://github.com/senanurcetin/Ops-Copilot.git
+cd Ops-Copilot
+node --version   # Node.js 20+
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 3 --markdown
+node scripts/github-actions-compare.mjs senanurcetin/Ops-Copilot senanurcetin/ot-sentinel --limit 3 --json
+npm ci
+npm run test:github-actions-audit
+npm run auditor:pack:dry-run
+```
+
+The first two commands make GitHub REST **GET** requests for public workflow history; no GitHub-hosted CI runner or private token is needed. The results will vary as workflow history changes. The package dry run only examines the proposed npm tarball and does not publish it.
+
+**Application summary to submit truthfully:**
+
+- **Developer / username:** `senanurcetin`
+- **Integration:** `Ops-Copilot GitHub Actions Auditor`
+- **Stage:** `In development`
+- **GitHub REST integration:** read-only repository workflow runs and job timings, with optional filters and multi-repository reports
+- **Public evidence:** https://github.com/senanurcetin/Ops-Copilot/blob/main/docs/github-api-live-demo.md
+- **Support e-mail:** senanur.cetin.work@gmail.com
+
+The [official eligibility criteria](https://docs.github.com/en/integrations/concepts/github-developer-program) list an integration using GitHub API and a support address. GitHub may ask the applicant for additional account information or agreement acceptance in its actual registration UI. Neither automated tests nor merged PRs constitute a program acceptance.
+
 ## What the account owner must do
 
 - Open https://github.com/developer/register while signed in to the intended GitHub account.

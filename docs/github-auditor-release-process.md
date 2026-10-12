@@ -17,16 +17,17 @@ npm run auditor:package
 npm run auditor:pack:dry-run
 ```
 
-4. Confirm the tarball contains **only** `package.json`, `README.md`, `LICENSE`, `CHANGELOG.md` and the two CLI executables. Ensure no `.env` files, API tokens, PEM keys, node_modules, Firebase config, industrial documents or private data appear.
-5. Test both entrypoints offline:
+4. The CI package test now invokes `npm pack --dry-run --json` and asserts the exact npm packlist, not just the staging directory. The builder rejects arbitrary output paths and will not erase an existing custom temporary directory. Inspect this test before release.
+5. Confirm the tarball contains **only** `package.json`, `README.md`, `LICENSE`, `CHANGELOG.md` and the two CLI executables. Ensure no `.env` files, API tokens, PEM keys, node_modules, Firebase config, industrial documents or private data appear.
+6. Test both entrypoints offline:
 
 ```bash
 node dist/github-actions-auditor/bin/github-actions-audit.mjs --help
 node dist/github-actions-auditor/bin/github-actions-compare.mjs --help
 ```
 
-6. Verify the intended npm package name is available, that the publisher controls the `@senanurcetin` scope and that registry account security controls are configured. **Do not assume ownership or availability.**
-7. Only after account-owner review, create an appropriate git tag, GitHub release and public npm publication from the clean, verified package folder. Record final published URLs and checksums in this document in a separate PR.
+7. Verify the intended npm package name is available, that the publisher controls the `@senanurcetin` scope and that registry account security controls are configured. **Do not assume ownership or availability.**
+8. Only after account-owner review, create an appropriate git tag, GitHub release and public npm publication from the clean, verified package folder. Record final published URLs and checksums in this document in a separate PR.
 
 ## Versioning rules
 

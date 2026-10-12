@@ -23,6 +23,8 @@ This is a sampled operational diagnostic and **not** a GitHub Actions billing st
 
 ## Release preparation
 
+The isolated package test also verifies the exact archive file list using npm's own `pack --dry-run --json` operation; no secrets, unrelated Next.js sources, or undeclared application files may enter the package. The builder refuses arbitrary cleanup destinations.
+
 Run `npm run auditor:package` to assemble the package at `dist/github-actions-auditor`. Run `npm run auditor:pack:dry-run` to inspect its content without publishing. The account owner controls whether and when any npm release is published.
 
 Developer support: senanur.cetin.work@gmail.com. MIT license. For technical details see the repository's GitHub Actions integration guide.
