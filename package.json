@@ -10,9 +10,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
-    "test": "node --import tsx --test tests/document-ranking.test.ts tests/auth-session.test.ts tests/internal-server-boundaries.test.mjs tests/sample-knowledge-base.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs tests/github-app-auth.test.mjs tests/github-public-actions.test.ts",
-    "test:ci": "node --import tsx --test tests/document-ranking.test.ts tests/auth-session.test.ts tests/internal-server-boundaries.test.mjs tests/sample-knowledge-base.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs tests/github-app-auth.test.mjs tests/github-public-actions.test.ts",
-    "test:unit": "node --import tsx --test tests/document-ranking.test.ts tests/auth-session.test.ts tests/internal-server-boundaries.test.mjs tests/sample-knowledge-base.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs tests/github-app-auth.test.mjs tests/github-public-actions.test.ts",
+    "test": "node --import tsx --test tests/document-ranking.test.ts tests/auth-session.test.ts tests/internal-server-boundaries.test.mjs tests/sample-knowledge-base.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs tests/github-app-auth.test.mjs tests/github-public-actions.test.ts tests/nexus-public-prs.test.mjs",
+    "test:ci": "node --import tsx --test tests/document-ranking.test.ts tests/auth-session.test.ts tests/internal-server-boundaries.test.mjs tests/sample-knowledge-base.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs tests/github-app-auth.test.mjs tests/github-public-actions.test.ts tests/nexus-public-prs.test.mjs",
+    "test:unit": "node --import tsx --test tests/document-ranking.test.ts tests/auth-session.test.ts tests/internal-server-boundaries.test.mjs tests/sample-knowledge-base.test.ts tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs tests/github-actions-package.test.mjs tests/github-app-auth.test.mjs tests/github-public-actions.test.ts tests/nexus-public-prs.test.mjs",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:debug": "playwright test --debug",
@@ -27,7 +27,8 @@
     "auditor:package": "node scripts/build-github-auditor-package.mjs",
     "auditor:pack:dry-run": "npm run auditor:package && npm pack --dry-run ./dist/github-actions-auditor",
     "test:github-app": "node --test tests/github-app-auth.test.mjs",
-    "audit:github-app": "node scripts/github-app-audit.mjs"
+    "audit:github-app": "node scripts/github-app-audit.mjs",
+    "test:nexus": "node --import tsx --test tests/nexus-public-prs.test.mjs"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
