@@ -23,6 +23,7 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 
 ```bash
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --event schedule --status failure --limit 10 --markdown
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --until 2026-10-12 --branch main --limit 50 --markdown > actions-review.md
 node --test tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs
