@@ -26,6 +26,7 @@ export async function buildPackage({ destination = outputDirectory, repositoryRo
     copyFile(manifestPath, join(output, 'package.json')),
     copyFile(join(sourceRoot, 'tools', 'github-actions-auditor', 'README.md'), join(output, 'README.md')),
     copyFile(join(sourceRoot, 'LICENSE'), join(output, 'LICENSE')),
+    copyFile(join(sourceRoot, 'tools', 'github-actions-auditor', 'CHANGELOG.md'), join(output, 'CHANGELOG.md')),
   ]);
   for (const command of ['github-actions-audit', 'github-actions-compare']) {
     const file = join(output, manifest.bin[command]);
