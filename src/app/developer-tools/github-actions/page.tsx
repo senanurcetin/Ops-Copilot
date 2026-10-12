@@ -57,10 +57,16 @@ export default function GitHubActionsDeveloperDemo() {
           <Link href="/login" className="text-sm font-semibold tracking-wide text-slate-300 hover:text-white">
             Ops-Copilot <span className="text-indigo-400">/ Developer Tools</span>
           </Link>
-          <a href="https://github.com/senanurcetin/Ops-Copilot" target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-indigo-400">
-            View source <ArrowUpRight className="h-4 w-4" />
-          </a>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/developer-tools/nexus"
+              className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-200 hover:bg-cyan-400/20">
+              NEXUS MVP preview <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            <a href="https://github.com/senanurcetin/Ops-Copilot" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:border-indigo-400">
+              View source <ArrowUpRight className="h-4 w-4" />
+            </a>
+          </div>
         </header>
 
         <section className="mb-10 max-w-3xl">
