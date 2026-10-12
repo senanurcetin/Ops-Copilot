@@ -279,7 +279,12 @@ export function parseArgs(args) {
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
-    else if (arg === '--until') until = validateDateRange({ until: args[++i] }).until;
+    else if (arg === '--until') {
+      if (!args[i + 1] || args[i + 1].startsWith('-')) {
+        throw new Error('--until requires a valid YYYY-MM-DD (UTC).');
+      }
+      until = validateDateRange({ until: args[++i] }).until;
+    }
     else if (arg === '--branch') branch = validateBranch(args[++i]);
     else if (arg === '--limit') {
       if (!/^\d+$/.test(args[i + 1] || '')) throw new Error('--limit requires a positive integer.');
