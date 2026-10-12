@@ -229,6 +229,27 @@ export function createPublicGithubCache({ ttlMs = 30000, maxEntries = 100, now =
 
 const defaultPublicCache = createPublicGithubCache();
 
+/** Parse both HTTP Retry-After formats: delta-seconds or an HTTP-date.
+ * An absent header is unknown; a malformed header is untrusted and must
+ * never be treated as permission to retry immediately.
+ * Returns milliseconds, null if absent, or Infinity for invalid values.
+ */
+export function parseRetryAfter(value, nowMs = Date.now()) {
+  if (value == null) return null;
+  if (typeof value !== 'string' || !value.trim()) return Infinity;
+  const raw = value.trim();
+  if (/^\d+$/.test(raw)) {
+    const seconds = Number(raw);
+    return Number.isSafeInteger(seconds) && seconds <= Number.MAX_SAFE_INTEGER / 1000
+      ? seconds * 1000 : Infinity;
+  }
+  // An HTTP-date should be RFC-style, not e.g. a signed or ambiguous number.
+  if (!/^[A-Za-z]+,\s/.test(raw)) return Infinity;
+  const expires = Date.parse(raw);
+  if (!Number.isFinite(expires) || !Number.isFinite(nowMs)) return Infinity;
+  return Math.max(0, expires - nowMs);
+}
+
 // Only idempotent GitHub GETs are retried. Never retry a long rate-limit reset
 // immediately, or leak the API response body (which may contain sensitive data).
 async function getJson(path, token, fetchImpl, cache = null) {
@@ -258,18 +279,18 @@ async function getJson(path, token, fetchImpl, cache = null) {
     }
     const remaining = response.headers?.get?.('x-ratelimit-remaining');
     const retryAfterRaw = response.headers?.get?.('retry-after');
-    const retryAfter = retryAfterRaw && /^\d+$/.test(retryAfterRaw) ? Number(retryAfterRaw) : null;
+    const retryAfterMs = parseRetryAfter(retryAfterRaw);
     const limited = response.status === 429 ||
       (response.status === 403 && (remaining === '0' || retryAfterRaw != null));
     const transient = [502, 503, 504].includes(response.status);
     // Respect a short Retry-After, otherwise use a conservative bounded backoff.
     // A long Retry-After means fail with guidance rather than hammering GitHub.
     const canRetry = attempt < 2 && (response.status === 429 ||
-      (response.status === 403 && retryAfter !== null) || transient) &&
-      (retryAfter === null || retryAfter <= 3);
+      (response.status === 403 && retryAfterMs !== null) || transient) &&
+      (retryAfterMs === null || retryAfterMs <= 3000);
     if (canRetry) {
       await new Promise(resolve => setTimeout(resolve,
-        retryAfter !== null ? retryAfter * 1000 : 250 * 2 ** attempt));
+        retryAfterMs !== null ? retryAfterMs : 250 * 2 ** attempt));
       continue;
     }
     const reason = limited
