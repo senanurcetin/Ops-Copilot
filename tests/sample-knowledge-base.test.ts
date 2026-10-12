@@ -19,9 +19,10 @@ test('bundled sample parses successfully without changing document fields', () =
   assert.ok(parsed.every(doc => doc.id && doc.title && doc.content));
 });
 
-test('parser rejects missing, invalid or empty sample JSON', () => {
-  for (const invalid of ['not json', 'null', '{}', '[]', '[null]', '[23]']) {
-    assert.throws(() => parseSampleKnowledgeBase(invalid), { name: 'Error' });
+test('parser distinguishes malformed JSON from invalid sample structure', () => {
+  assert.throws(() => parseSampleKnowledgeBase('not json'), SyntaxError);
+  for (const invalid of ['null', '{}', '[]', '[null]', '[23]']) {
+    assert.throws(() => parseSampleKnowledgeBase(invalid), /Sample knowledge base/);
   }
 });
 
