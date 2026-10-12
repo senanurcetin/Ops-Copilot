@@ -55,6 +55,18 @@ The auditor distinguishes workflows by stable GitHub workflow IDs even when seve
 
 **Review the working GitHub API integration:** [reproducible demo with real public API evidence](docs/github-api-live-demo.md) · [Developer Program application details](docs/github-developer-program-application.md). See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
 
+## Standalone developer CLI package
+
+The GitHub Actions REST auditor can also be assembled as a **dependency-free npm-style CLI package**, separate from Next.js/Firebase:
+
+```bash
+npm run auditor:package
+npm run auditor:pack:dry-run
+node --test tests/github-actions-package.test.mjs
+```
+
+The builder copies the maintained read-only API modules, README and MIT license into an ignored staging directory. This is a reproducible **release candidate only**; it does not imply a published npm package or Developer Program membership. See [standalone package instructions](tools/github-actions-auditor/README.md).
+
 ## Architecture snapshot
 
 - **Frontend:** Next.js App Router, React 19, Tailwind CSS, ShadCN UI
