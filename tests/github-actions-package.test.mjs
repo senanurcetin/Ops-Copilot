@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildPackage } from '../scripts/build-github-auditor-package.mjs';
@@ -38,6 +38,19 @@ test('standalone package includes only two working CLI bins, documentation and l
       assert.match(usage, /owner\/repo/i);
     }
     assert.match(await readFile(join(destination, 'LICENSE'), 'utf8'), /MIT License/);
+    // npm's own packlist is more authoritative than checking staged files:
+    // it must not include secrets, Next.js sources or hidden project files.
+    const packed = JSON.parse(execFileSync('npm', [
+      'pack', '--dry-run', '--json', destination,
+    ], { encoding: 'utf8', timeout: 30000, cwd: temporary }));
+    assert.equal(packed.length, 1);
+    const actualFiles = packed[0].files.map(entry => entry.path).sort();
+    assert.deepEqual(actualFiles, [
+      'CHANGELOG.md', 'LICENSE', 'README.md',
+      'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs',
+      'package.json',
+    ]);
+    assert.ok(packed[0].size > 0);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
@@ -48,4 +61,24 @@ test('package builder rejects overwriting checked-in source directories', async 
   await assert.rejects(buildPackage({
     destination: join(repositoryRoot, 'scripts'),
   }), /Refusing to overwrite/);
+  for (const destination of [
+    join(repositoryRoot, 'src'),
+    join(repositoryRoot, 'tools'),
+    resolve(repositoryRoot, '..'),
+    join(homedir(), 'Documents'),
+    tmpdir(),
+  ]) {
+    await assert.rejects(buildPackage({ destination }), /Refusing to overwrite/);
+  }
+});
+
+test('a custom temporary destination is never silently erased on a second build', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'ops-actions-package-'));
+  const destination = join(temporary, 'cli');
+  try {
+    await buildPackage({ destination });
+    await assert.rejects(buildPackage({ destination }), /must not already exist/);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
 });
