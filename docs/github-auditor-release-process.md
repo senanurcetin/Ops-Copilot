@@ -17,7 +17,8 @@ npm run auditor:package
 npm run auditor:pack:dry-run
 ```
 
-4. Confirm the tarball contains **only** `package.json`, `README.md`, `LICENSE`, `CHANGELOG.md` and the two CLI executables. Ensure no `.env` files, API tokens, PEM keys, node_modules, Firebase config, industrial documents or private data appear.
+4. The CI package test now invokes `npm pack --dry-run --json` and asserts the exact npm packlist, not just the staging directory. The builder rejects arbitrary output paths and will not erase an existing custom temporary directory. Inspect this test before release.
+5. Confirm the tarball contains **only** `package.json`, `README.md`, `LICENSE`, `CHANGELOG.md` and the two CLI executables. Ensure no `.env` files, API tokens, PEM keys, node_modules, Firebase config, industrial documents or private data appear.
 5. Test both entrypoints offline:
 
 ```bash
