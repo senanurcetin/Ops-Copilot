@@ -5,7 +5,7 @@
  */
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { auditRepository, validateRepository, validateSinceDate } from './github-actions-audit.mjs';
+import { auditRepository, validateRepository, validateSinceDate, validateDateRange } from './github-actions-audit.mjs';
 
 export const MAX_REPOSITORIES = 5;
 export const COMPARISON_NOTE =
@@ -33,6 +33,7 @@ export function parseComparisonArgs(args) {
   const repositories = [];
   let limit = 10;
   let since;
+  let until;
   let json = false;
   let markdown = false;
   for (let i = 0; i < args.length; i++) {
@@ -40,6 +41,7 @@ export function parseComparisonArgs(args) {
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
+    else if (arg === '--until') until = validateDateRange({ until: args[++i] }).until;
     else if (arg === '--limit') {
       if (!/^\d+$/.test(args[i + 1] || '')) throw new Error('--limit requires a positive integer.');
       limit = Number(args[++i]);
@@ -55,7 +57,8 @@ export function parseComparisonArgs(args) {
     throw new Error('--limit must be between 1 and 100.');
   }
   if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
-  return { repositories, limit, ...(since ? { since } : {}), json, markdown };
+  validateDateRange({ since, until });
+  return { repositories, limit, ...(since ? { since } : {}), ...(until ? { until } : {}), json, markdown };
 }
 
 /**
@@ -64,18 +67,18 @@ export function parseComparisonArgs(args) {
  * auditImpl allows fully offline and reproducible tests.
  */
 export async function compareRepositories({
-  repositories, limit = 10, since, token, auditImpl = auditRepository,
+  repositories, limit = 10, since, until, token, auditImpl = auditRepository,
 }) {
   validateRepositories(repositories);
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be between 1 and 100.');
   }
-  if (since !== undefined) validateSinceDate(since);
+  validateDateRange({ since, until });
   const records = [];
   for (const repository of repositories) {
     let report;
     try {
-      report = await auditImpl({ repository, limit, since, token });
+      report = await auditImpl({ repository, limit, since, until, token });
     } catch (error) {
       throw new Error('Could not audit ' + repository + ': ' + error.message);
     }
@@ -106,6 +109,7 @@ export async function compareRepositories({
     repositories_inspected: records.length,
     limit_per_repository: limit,
     ...(since ? { since } : {}),
+    ...(until ? { until } : {}),
     comparison_note: COMPARISON_NOTE,
     repositories: records,
   };
@@ -124,6 +128,7 @@ export function renderComparisonMarkdown(report) {
     '- Repositories inspected: **' + report.repositories_inspected + '**',
     '- Maximum recent runs per repository: **' + report.limit_per_repository + '**',
     ...(report.since ? ['- Created since (UTC): **' + report.since + '**'] : []),
+    ...(report.until ? ['- Created until (UTC): **' + report.until + '**'] : []),
     '',
     '> ' + report.comparison_note,
     '',
@@ -149,7 +154,7 @@ export function renderComparisonMarkdown(report) {
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-compare.mjs owner/repo1 owner/repo2 [owner/repo3 ...] [--limit 10] [--since YYYY-MM-DD] [--json | --markdown]',
+    'Usage: node scripts/github-actions-compare.mjs owner/repo1 owner/repo2 [owner/repo3 ...] [--limit 10] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--json | --markdown]',
     'Compare 2–5 repositories. All GitHub API requests are GET; no Actions run is started.',
     'Use GH_TOKEN or GITHUB_TOKEN with Actions: read for private repositories.',
     'This is NOT a GitHub billing or cost report.',
@@ -164,12 +169,14 @@ async function main() {
       repositories: options.repositories,
       limit: options.limit,
       since: options.since,
+      until: options.until,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
     if (options.json) return console.log(JSON.stringify(report, null, 2));
     if (options.markdown) return process.stdout.write(renderComparisonMarkdown(report));
     console.log('GitHub Actions comparison | up to ' + report.limit_per_repository +
-      ' runs per repo' + (report.since ? ' | since ' + report.since : ''));
+      ' runs per repo' + (report.since ? ' | since ' + report.since : '') +
+      (report.until ? ' | until ' + report.until : ''));
     console.log(report.comparison_note);
     for (const record of report.repositories) {
       console.log('- ' + record.repository + ': ' + record.inspected_runs + ' runs; ' +
