@@ -40,7 +40,7 @@ node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node --test tests/github-actions-audit.test.mjs
 ```
 
-It supports private repositories with an optional read-only `GH_TOKEN`. Reported elapsed job-minutes are **not billed minutes**. See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
+It supports private repositories with an optional read-only `GH_TOKEN`. Add `--since YYYY-MM-DD` to select recent runs, or `--markdown` to produce a review-ready report without using a GitHub Actions runner. Reported elapsed job-minutes are **not billed minutes**. See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
 
 ## Architecture snapshot
 
