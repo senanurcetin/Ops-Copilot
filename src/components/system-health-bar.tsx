@@ -4,7 +4,7 @@ import { ShieldCheck, Database, FolderKanban, Circle } from 'lucide-react';
 
 export function SystemHealthBar() {
   return (
-    <div className="bg-white border-b">
+    <div className="ops-healthbar bg-white border-b">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-12 items-center justify-start gap-8 text-sm text-slate-600">
           <div className="flex items-center gap-2">
