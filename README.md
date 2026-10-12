@@ -49,7 +49,7 @@ node scripts/github-actions-compare.mjs senanurcetin/Ops-Copilot senanurcetin/ot
 ```
 
 This compares recent run/job counts and observed elapsed job-minutes, not billed Actions minutes or normalized engineering performance. Add `--since YYYY-MM-DD` to select recent runs, or `--markdown` to produce a review-ready report without using a GitHub Actions runner. Reported elapsed job-minutes are **not billed minutes**.
-The auditor distinguishes workflows by stable GitHub workflow IDs even when several files share the same display name, avoiding misleading aggregate statistics. It also supports `--branch main` (or a feature branch) to analyze only workflow runs associated with the selected branch.
+The auditor distinguishes workflows by stable GitHub workflow IDs even when several files share the same display name, avoiding misleading aggregate statistics. New `--event schedule` and `--status failure` filters use GitHub's own REST API query parameters to focus on specific triggers and outcomes **before** sampling. These can be combined with date-window and branch filters. It also supports `--branch main` (or a feature branch) to analyze only workflow runs associated with the selected branch.
 
 **Verified multi-repository example:** [two public GitHub Actions repositories, job timestamps and comparison limits](docs/github-actions-repository-comparison-example.md).
 

@@ -23,6 +23,7 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 
 ```bash
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --event schedule --status failure --limit 10 --markdown
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --until 2026-10-12 --branch main --limit 50 --markdown > actions-review.md
 node --test tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs
@@ -50,12 +51,14 @@ The independent comparison CLI uses the same read-only GitHub REST API client as
 
 ```bash
 node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --json
+node scripts/github-actions-compare.mjs owner/one owner/two --event pull_request --status failure --limit 10 --markdown
 node scripts/github-actions-compare.mjs owner/one owner/two --since 2026-10-01 --until 2026-10-12 --markdown > comparison.md
 npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 ```
 
 - Accepts **2–5 distinct repositories**, validates each `owner/name` input, and uses **up to 10 recent runs per repository by default** (maximum 100). Calls are sequential to avoid unnecessary API bursts.
 - Reports sampled run counts, failed/scheduled runs, completed/incomplete jobs, elapsed job-minutes, and per-repository sampling warnings.
+- `--event EVENT` (e.g. `push`, `pull_request`, `schedule`, `workflow_dispatch`) and `--status STATUS` (e.g. `failure`, `success`, `completed`, `in_progress`) apply the **same GitHub REST filters** to every repository before the run cap. The supported status values follow GitHub's documented API enum. Each selected filter appears in text, JSON and Markdown. A request like `--status failure` returns only failed runs, so its failure count is scoped to that subset; it is not a global failure rate.
 - If any repository cannot be read, the command **fails without emitting a partial JSON/Markdown result**. Private repositories need an appropriately scoped Actions-read token.
 - `--since YYYY-MM-DD` and `--until YYYY-MM-DD` define the same **inclusive UTC calendar-day range** for every compared repository. Either boundary can be used alone; a reversed date range fails before any API requests. GitHub's `created` search filter applies **before** the existing per-repository sample cap. Date-limited results are still not account-wide billing totals.
 - Same `--since YYYY-MM-DD` UTC lower bound applies to each repository. `--branch` is deliberately not available on the cross-repository command, because different repos may use different default branches; compare their unfiltered runs instead or use the single-repo auditor with explicit branches.
@@ -72,6 +75,7 @@ npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 - A rate-limited response is reported with safe retry guidance. HTTP failures never print token values. A JSON or Markdown report is not produced after API validation fails.
 - `--until YYYY-MM-DD` adds the inclusive UTC upper bound to GitHub's `created` search filter. With both bounds, the tool sends `created=START..END`; with only `--until`, it sends `created=<=END`. Both forms were verified against the public GitHub API on 12 October 2026. Invalid or inverted ranges are rejected before any network request. JSON, text and Markdown record any selected upper bound.
 - `--since YYYY-MM-DD` uses GitHub's documented `created` workflow-run filter (inclusive lower bound, UTC). It scopes the API query **before** sampling; it does not promise complete historical coverage if more than `--limit` runs match.
+- `--event EVENT` scopes workflow runs by their trigger, and `--status STATUS` scopes by GitHub's status or conclusion. You can use either independently, or combine them with `--since`, `--until` and `--branch`. Invalid values are rejected before any network request. GitHub applies these filters server-side and may impose a 1,000-result cap per filtered query; these tools only inspect up to their selected per-page limit.
 - `--branch REF` scopes workflow run discovery to a single branch using GitHub's `branch` REST query parameter. Branch names containing `/` are URI-encoded, and the selected branch is recorded in text, Markdown and JSON output. Combine it with `--since` to focus on one development line; this does not change branches, run workflows or query billing.
 - `--markdown` renders a deterministic, escaped Markdown summary you can save or attach to an engineering review. It cannot be combined with `--json`.
 - Generated Markdown includes sampled run counts, failures, scheduled triggers, runtime estimates and recommendations. Treat it as diagnostic evidence rather than an exact bill.

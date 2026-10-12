@@ -219,3 +219,51 @@ test('comparison rejects invalid date windows before making any API calls', asyn
   }), /--since must not be later/);
   assert.equal(calls, 0);
 });
+
+
+test('comparison CLI accepts a shared GitHub Actions event and status', () => {
+  assert.deepEqual(parseComparisonArgs(['org/one', 'org/two',
+    '--event', 'pull_request', '--status', 'failure']), {
+    repositories: ['org/one', 'org/two'], limit: 10,
+    event: 'pull_request', status: 'failure', json: false, markdown: false,
+  });
+  for (const args of [
+    ['org/one', 'org/two', '--event'],
+    ['org/one', 'org/two', '--event', '--json'],
+    ['org/one', 'org/two', '--status'],
+    ['org/one', 'org/two', '--status', 'failed'],
+  ]) {
+    assert.throws(() => parseComparisonArgs(args));
+  }
+});
+
+test('comparison applies both filters consistently to each repository and reports their scope', async () => {
+  const calls = [];
+  const reportData = await compareRepositories({
+    repositories: ['org/one', 'org/two'],
+    event: 'schedule', status: 'success',
+    auditImpl: async options => {
+      calls.push(options);
+      return report(options.repository, 2);
+    },
+  });
+  assert.deepEqual(calls.map(x => [x.event, x.status]), [
+    ['schedule', 'success'], ['schedule', 'success'],
+  ]);
+  assert.equal(reportData.event, 'schedule');
+  assert.equal(reportData.status, 'success');
+  assert.match(renderComparisonMarkdown(reportData), /Trigger event: \*\*schedule\*\*/);
+  assert.match(renderComparisonMarkdown(reportData), /Run status\/conclusion: \*\*success\*\*/);
+});
+
+test('invalid multi-repo API filters fail before any repository is requested', async () => {
+  let calls = 0;
+  const auditImpl = async () => { calls++; return report('a/one', 1); };
+  await assert.rejects(compareRepositories({
+    repositories: ['a/one', 'a/two'], event: 'push?limit=100', auditImpl,
+  }), /--event/);
+  await assert.rejects(compareRepositories({
+    repositories: ['a/one', 'a/two'], status: 'failed', auditImpl,
+  }), /--status/);
+  assert.equal(calls, 0);
+});

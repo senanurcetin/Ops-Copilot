@@ -12,6 +12,8 @@ import {
   validateDateRange,
   createdDateFilter,
   validateRepository,
+  validateEvent,
+  validateStatus,
 } from '../scripts/github-actions-audit.mjs';
 
 const job = (started_at, completed_at) => ({ started_at, completed_at });
@@ -408,4 +410,78 @@ test('GitHub API date search query uses inclusive range before sampling', async 
     /--since must not be later/,
   );
   assert.equal(calls.length, 2);
+});
+
+
+test('GitHub Actions trigger event and status filters accept API names and reject malformed input', () => {
+  for (const event of ['push', 'pull_request', 'workflow_dispatch', 'schedule', 'pull_request_target']) {
+    assert.equal(validateEvent(event), event);
+  }
+  for (const event of ['', 'Push', '--json', 'push&status=failure', 'push\nstatus', 'x'.repeat(65), undefined]) {
+    assert.throws(() => validateEvent(event), /--event/);
+  }
+  for (const status of ['completed', 'success', 'failure', 'in_progress', 'queued', 'cancelled', 'timed_out']) {
+    assert.equal(validateStatus(status), status);
+  }
+  for (const status of ['', 'FAILURE', 'nonexistent', 'failure&branch=main', undefined]) {
+    assert.throws(() => validateStatus(status), /--status/);
+  }
+});
+
+test('CLI accepts both filters and rejects absent or invalid values before fetching', () => {
+  assert.deepEqual(parseArgs(['a/b', '--event', 'pull_request', '--status', 'failure']), {
+    repository: 'a/b', limit: 30, json: false, event: 'pull_request', status: 'failure',
+  });
+  for (const args of [
+    ['a/b', '--event'], ['a/b', '--event', '--json'], ['a/b', '--status'],
+    ['a/b', '--status', '--markdown'], ['a/b', '--status', 'failed'],
+  ]) {
+    assert.throws(() => parseArgs(args));
+  }
+});
+
+test('REST event/status filtering occurs before run sampling and preserves query scope', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    return { ok: true, json: async () => ({ workflow_runs: [] }) };
+  };
+  const result = await auditRepository({
+    repository: 'a/b', limit: 8, since: '2026-10-01', until: '2026-10-12',
+    branch: 'feature/demo', event: 'pull_request', status: 'failure', fetchImpl,
+  });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /created=2026-10-01\.\.2026-10-12/);
+  assert.match(calls[0].url, /branch=feature%2Fdemo/);
+  assert.match(calls[0].url, /event=pull_request/);
+  assert.match(calls[0].url, /status=failure/);
+  assert.equal(calls[0].options.method, undefined);
+  assert.equal(result.event, 'pull_request');
+  assert.equal(result.status, 'failure');
+  const markdown = renderMarkdownReport(result);
+  assert.match(markdown, /Trigger event: \*\*pull_request\*\*/);
+  assert.match(markdown, /Run status\/conclusion: \*\*failure\*\*/);
+  await assert.rejects(auditRepository({
+    repository: 'a/b', event: 'push?status=success', fetchImpl,
+  }), /--event/);
+  await assert.rejects(auditRepository({
+    repository: 'a/b', status: 'failed', fetchImpl,
+  }), /--status/);
+  assert.equal(calls.length, 1);
+});
+
+test('individual GitHub event and status filters are independently optional', async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    calls.push(url);
+    return { ok: true, json: async () => ({ workflow_runs: [] }) };
+  };
+  const eventReport = await auditRepository({ repository: 'a/b', event: 'schedule', fetchImpl });
+  const statusReport = await auditRepository({ repository: 'a/b', status: 'in_progress', fetchImpl });
+  assert.match(calls[0], /event=schedule/);
+  assert.doesNotMatch(calls[0], /status=/);
+  assert.match(calls[1], /status=in_progress/);
+  assert.doesNotMatch(calls[1], /event=/);
+  assert.equal(eventReport.status, undefined);
+  assert.equal(statusReport.event, undefined);
 });
