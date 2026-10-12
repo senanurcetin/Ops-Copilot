@@ -485,3 +485,73 @@ test('individual GitHub event and status filters are independently optional', as
   assert.equal(eventReport.status, undefined);
   assert.equal(statusReport.event, undefined);
 });
+
+
+test('missing GitHub jobs in a later API page cause an explicit integrity failure', async () => {
+  const first = Array.from({ length: 100 }, (_, i) => ({
+    id: i + 1, started_at: '2026-10-12T10:00:00Z',
+    completed_at: '2026-10-12T10:01:00Z',
+  }));
+  const fetchImpl = async url => ({
+    ok: true,
+    json: async () => url.includes('/actions/runs?')
+      ? { workflow_runs: [{ id: 11, name: 'CI', workflow_id: 99 }] }
+      : url.endsWith('&page=1')
+        ? { total_count: 101, jobs: first }
+        : { total_count: 101, jobs: [] },
+  });
+  await assert.rejects(auditRepository({ repository: 'a/b', fetchImpl }),
+    /inconsistent job count for run 11/);
+});
+
+test('unexpectedly short first pages cannot silently undercount job time', async () => {
+  const fetchImpl = async url => ({
+    ok: true,
+    json: async () => url.includes('/actions/runs?')
+      ? { workflow_runs: [{ id: 12, name: 'CI' }] }
+      : { total_count: 4, jobs: [{ id: 1 }] },
+  });
+  await assert.rejects(auditRepository({ repository: 'a/b', fetchImpl }),
+    /inconsistent job count for run 12/);
+});
+
+test('duplicated GitHub job IDs across API pages cannot inflate elapsed time', async () => {
+  const first = Array.from({ length: 100 }, (_, i) => ({
+    id: i + 1, started_at: '2026-10-12T10:00:00Z',
+    completed_at: '2026-10-12T10:01:00Z',
+  }));
+  const fetchImpl = async url => ({
+    ok: true,
+    json: async () => url.includes('/actions/runs?')
+      ? { workflow_runs: [{ id: 13, name: 'CI' }] }
+      : url.endsWith('&page=1')
+        ? { total_count: 101, jobs: first }
+        : { total_count: 101, jobs: [{ ...first[99] }] },
+  });
+  await assert.rejects(auditRepository({ repository: 'a/b', fetchImpl }),
+    /duplicate job IDs for run 13/);
+});
+
+test('valid 500-job cap reports truncation instead of pretending an exhaustive result', async () => {
+  const urls = [];
+  const fetchImpl = async url => {
+    urls.push(url);
+    if (url.includes('/actions/runs?')) {
+      return { ok: true, json: async () => ({
+        workflow_runs: [{ id: 14, name: 'CI', workflow_id: 99 }],
+      }) };
+    }
+    const page = Number(new URL(url).searchParams.get('page'));
+    const jobs = Array.from({ length: 100 }, (_, i) => ({
+      id: (page - 1) * 100 + i + 1,
+      started_at: '2026-10-12T10:00:00Z',
+      completed_at: '2026-10-12T10:01:00Z',
+    }));
+    return { ok: true, json: async () => ({ total_count: 501, jobs }) };
+  };
+  const result = await auditRepository({ repository: 'a/b', limit: 2, fetchImpl });
+  assert.equal(urls.length, 6);
+  assert.equal(result.completed_jobs, 500);
+  assert.equal(result.elapsed_job_minutes, 500);
+  assert.match(result.sample_warning, /more than 500 jobs/);
+});
