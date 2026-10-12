@@ -199,19 +199,77 @@ export function summarizeRuns(repository, runs, jobsByRun) {
   };
 }
 
-async function getJson(path, token, fetchImpl) {
-  const response = await fetchImpl(`${API}${path}`, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'ops-copilot-actions-auditor',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+/** Bounded, process-local cache for anonymous GitHub REST GET data only. */
+export function createPublicGithubCache({ ttlMs = 30000, maxEntries = 100, now = Date.now } = {}) {
+  if (!Number.isSafeInteger(ttlMs) || ttlMs < 1 || !Number.isSafeInteger(maxEntries) ||
+      maxEntries < 1 || maxEntries > 1000 || typeof now !== 'function') {
+    throw new Error('Invalid public GitHub response cache configuration.');
+  }
+  const entries = new Map();
+  return {
+    get(key) {
+      const entry = entries.get(key);
+      if (!entry) return undefined;
+      if (entry.expiresAt <= now()) {
+        entries.delete(key);
+        return undefined;
+      }
+      return structuredClone(entry.value);
     },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!response.ok) {
+    set(key, value) {
+      entries.delete(key);
+      entries.set(key, { value: structuredClone(value), expiresAt: now() + ttlMs });
+      while (entries.size > maxEntries) entries.delete(entries.keys().next().value);
+    },
+    size() { return entries.size; },
+  };
+}
+
+const defaultPublicCache = createPublicGithubCache();
+
+// Only idempotent GitHub GETs are retried. Never retry a long rate-limit reset
+// immediately, or leak the API response body (which may contain sensitive data).
+async function getJson(path, token, fetchImpl, cache = null) {
+  const cached = !token && cache ? cache.get(path) : undefined;
+  if (cached !== undefined) return cached;
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    let response;
+    try {
+      response = await fetchImpl(`${API}${path}`, {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'ops-copilot-actions-auditor',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch {
+      throw new Error('GitHub API request failed or timed out.');
+    }
+    if (response.ok) {
+      let data;
+      try { data = await response.json(); }
+      catch { throw new Error('GitHub API returned invalid JSON.'); }
+      if (!token && cache) cache.set(path, data);
+      return data;
+    }
+    const remaining = response.headers?.get?.('x-ratelimit-remaining');
+    const retryAfterRaw = response.headers?.get?.('retry-after');
+    const retryAfter = retryAfterRaw && /^\d+$/.test(retryAfterRaw) ? Number(retryAfterRaw) : null;
     const limited = response.status === 429 ||
-      (response.status === 403 && response.headers?.get?.('x-ratelimit-remaining') === '0');
+      (response.status === 403 && (remaining === '0' || retryAfterRaw != null));
+    const transient = [502, 503, 504].includes(response.status);
+    // Respect a short Retry-After, otherwise use a conservative bounded backoff.
+    // A long Retry-After means fail with guidance rather than hammering GitHub.
+    const canRetry = attempt < 2 && (response.status === 429 ||
+      (response.status === 403 && retryAfter !== null) || transient) &&
+      (retryAfter === null || retryAfter <= 3);
+    if (canRetry) {
+      await new Promise(resolve => setTimeout(resolve,
+        retryAfter !== null ? retryAfter * 1000 : 250 * 2 ** attempt));
+      continue;
+    }
     const reason = limited
       ? 'API rate limit reached. Retry after the GitHub rate-limit window resets or use a scoped read-only token.'
       : response.status === 401 || response.status === 403 || response.status === 404
@@ -219,14 +277,10 @@ async function getJson(path, token, fetchImpl) {
         : 'GitHub API request failed.';
     throw new Error(`GitHub API HTTP ${response.status}. ${reason}`);
   }
-  try {
-    return await response.json();
-  } catch {
-    throw new Error('GitHub API returned invalid JSON.');
-  }
+  throw new Error('GitHub API request could not be completed.');
 }
 
-export async function auditRepository({ repository, token, limit = 30, since, until, branch, event, status, fetchImpl = fetch }) {
+export async function auditRepository({ repository, token, limit = 30, since, until, branch, event, status, fetchImpl = fetch, publicCache }) {
   const [owner, repo] = validateRepository(repository);
   validateDateRange({ since, until });
   if (branch !== undefined) validateBranch(branch);
@@ -236,12 +290,13 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     throw new Error('--limit must be an integer from 1 to 100.');
   }
   const prefix = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const cache = token ? null : (publicCache ?? (fetchImpl === fetch ? defaultPublicCache : null));
   const dateValue = createdDateFilter({ since, until });
   const dateFilter = dateValue ? '&created=' + encodeURIComponent(dateValue) : '';
   const branchFilter = branch ? '&branch=' + encodeURIComponent(branch) : '';
   const eventFilter = event ? '&event=' + encodeURIComponent(event) : '';
   const statusFilter = status ? '&status=' + encodeURIComponent(status) : '';
-  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}${branchFilter}${eventFilter}${statusFilter}`, token, fetchImpl);
+  const runsResult = await getJson(`${prefix}/actions/runs?per_page=${limit}&page=1${dateFilter}${branchFilter}${eventFilter}${statusFilter}`, token, fetchImpl, cache);
   if (!runsResult || !Array.isArray(runsResult.workflow_runs)) {
     throw new Error('Unexpected GitHub API response: workflow_runs must be an array.');
   }
@@ -253,7 +308,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     if (!Number.isSafeInteger(run?.id) || run.id < 1) {
       throw new Error('Unexpected GitHub API response: invalid workflow run id.');
     }
-    const firstPage = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=1`, token, fetchImpl);
+    const firstPage = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=1`, token, fetchImpl, cache);
     if (!firstPage || !Array.isArray(firstPage.jobs) ||
         !Number.isSafeInteger(firstPage.total_count) || firstPage.total_count < firstPage.jobs.length) {
       throw new Error('Unexpected GitHub API response: invalid job collection.');
@@ -262,7 +317,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     const total = firstPage.total_count;
     const additionalPages = Math.min(Math.ceil(total / 100), 5);
     for (let page = 2; page <= additionalPages; page++) {
-      const payload = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=${page}`, token, fetchImpl);
+      const payload = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=${page}`, token, fetchImpl, cache);
       if (!payload || !Array.isArray(payload.jobs)) {
         throw new Error('Unexpected GitHub API response: invalid job page.');
       }
