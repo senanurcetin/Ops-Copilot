@@ -24,6 +24,7 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 ```bash
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --limit 50 --markdown > actions-review.md
 node --test tests/github-actions-audit.test.mjs
 ```
 
@@ -43,6 +44,9 @@ The script is platform-agnostic except for the shell-specific `export` example; 
 - `elapsed_job_minutes` is the sum of `completed_at - started_at` for sampled jobs, rounded to one decimal.
 - **It is not GitHub's billed minutes**, nor an account-level billing statement. Job time excludes incomplete jobs. Runner multipliers, OS-specific rates, storage, cached artifact usage, and additional account activity are not modeled.
 - A maximum of 100 recent runs can be inspected; at most 500 jobs per run are sampled. The report flags truncated results.
+- `--since YYYY-MM-DD` uses GitHub's documented `created` workflow-run filter (inclusive lower bound, UTC). It scopes the API query **before** sampling; it does not promise complete historical coverage if more than `--limit` runs match.
+- `--markdown` renders a deterministic, escaped Markdown summary you can save or attach to an engineering review. It cannot be combined with `--json`.
+- Generated Markdown includes sampled run counts, failures, scheduled triggers, runtime estimates and recommendations. Treat it as diagnostic evidence rather than an exact bill.
 - Recommendations are *heuristics*, not proven savings. A high number of scheduled executions, recurring failures, or significant sample runtime prompts human review.
 - No automated modification of cron schedules, branch rules, repository permissions or workflows is performed.
 - A public repository using standard GitHub-hosted runners does not consume the private-repository included-minutes allowance; a private repository typically does.
