@@ -59,6 +59,10 @@ The auditor distinguishes workflows by stable GitHub workflow IDs even when seve
 
 A [public, interactive Actions explorer](/developer-tools/github-actions) lives at the route `/developer-tools/github-actions` when Ops-Copilot is running. It reads up to 10 recent runs through a bounded, cached server-side API endpoint; users can enter a public `owner/repo` and inspect linked workflow records, success/failure counts and sampling limitations. No private GitHub token, GitHub App installation, paid Actions runner or login is required for this developer demo. The demo route is implemented but has not been publicly deployed or independently checked at a live URL.
 
+## CLI release management
+
+The GitHub Actions Auditor has a versioned [0.1.0 release candidate changelog](tools/github-actions-auditor/CHANGELOG.md) and a [pre-publication release verification checklist](docs/github-auditor-release-process.md). No package-registry release or new GitHub release has been claimed.
+
 ## Standalone developer CLI package
 
 The GitHub Actions REST auditor can also be assembled as a **dependency-free npm-style CLI package**, separate from Next.js/Firebase:
