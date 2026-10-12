@@ -6,6 +6,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/server/firebase-admin';
 import { rankDocuments } from './document-ranking';
+import { planKnowledgeBaseReplacement, type KnowledgeDocument } from '@/server/sample-knowledge-base';
 
 export interface Document {
   id: string;
@@ -50,6 +51,38 @@ export async function storeDocuments(userId: string, docs: Document[]): Promise<
     );
   }
 
+  await batch.commit();
+}
+
+/**
+ * Atomically replace the small, bundled demo knowledge base.
+ *
+ * Do not clear the old collection before verifying the replacement: parsing,
+ * validation, read, write-limit or commit failures must retain prior data.
+ * Firestore's batch commit applies the deletes and writes atomically.
+ */
+export async function replaceSampleDocuments(
+  userId: string,
+  documents: KnowledgeDocument[],
+): Promise<void> {
+  const collection = getKnowledgeCollection(userId);
+  const existing = await collection.get();
+  const { obsoleteIds } = planKnowledgeBaseReplacement(
+    existing.docs.map(doc => doc.id), documents,
+  );
+
+  const batch = getAdminDb().batch();
+  for (const id of obsoleteIds) {
+    batch.delete(collection.doc(id));
+  }
+  for (const doc of documents) {
+    batch.set(collection.doc(doc.id), {
+      id: doc.id,
+      title: doc.title,
+      content: doc.content,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
   await batch.commit();
 }
 
