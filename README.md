@@ -40,7 +40,7 @@ node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node --test tests/github-actions-audit.test.mjs
 ```
 
-It supports private repositories with an optional read-only `GH_TOKEN`.
+It supports private repositories with an optional read-only `GH_TOKEN`. Select an inclusive UTC time window with `--since 2026-10-01 --until 2026-10-12`, including for multi-repository comparisons. Both boundaries are validated before any API request.
 
 For a **read-only, side-by-side sample comparison** of two repositories, use:
 

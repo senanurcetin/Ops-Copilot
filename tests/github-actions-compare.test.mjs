@@ -176,3 +176,46 @@ test('sample truncation warnings remain specific to each repository', async () =
   assert.match(doc, /org\/first.*Older runs excluded/);
   assert.doesNotMatch(doc, /org\/second.*Older runs excluded/);
 });
+
+
+test('multi-repository CLI supports a common inclusive end date', () => {
+  assert.deepEqual(parseComparisonArgs(['a/one', 'a/two', '--since', '2026-10-01',
+    '--until', '2026-10-12']), {
+    repositories: ['a/one', 'a/two'],
+    limit: 10, since: '2026-10-01', until: '2026-10-12',
+    json: false, markdown: false,
+  });
+  assert.throws(() => parseComparisonArgs(['a/one', 'a/two', '--until']), /--until/);
+  assert.throws(() => parseComparisonArgs(['a/one', 'a/two',
+    '--since', '2026-10-14', '--until', '2026-10-12']), /--since must not be later/);
+});
+
+test('comparison propagates exact UTC date bounds to every repository', async () => {
+  const calls = [];
+  const result = await compareRepositories({
+    repositories: ['a/one', 'a/two'],
+    since: '2026-10-01',
+    until: '2026-10-12',
+    auditImpl: async options => {
+      calls.push(options);
+      return report(options.repository, 1);
+    },
+  });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(call => call.until), ['2026-10-12', '2026-10-12']);
+  assert.deepEqual(calls.map(call => call.since), ['2026-10-01', '2026-10-01']);
+  assert.equal(result.until, '2026-10-12');
+  assert.match(renderComparisonMarkdown(result),
+    /Created until \(UTC\): \*\*2026-10-12\*\*/);
+});
+
+test('comparison rejects invalid date windows before making any API calls', async () => {
+  let calls = 0;
+  await assert.rejects(compareRepositories({
+    repositories: ['a/one', 'a/two'],
+    since: '2026-10-14',
+    until: '2026-10-12',
+    auditImpl: async () => { calls++; return report('a/one', 1); },
+  }), /--since must not be later/);
+  assert.equal(calls, 0);
+});

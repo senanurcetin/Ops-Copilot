@@ -9,6 +9,8 @@ import {
   summarizeRuns,
   validateBranch,
   validateSinceDate,
+  validateDateRange,
+  createdDateFilter,
   validateRepository,
 } from '../scripts/github-actions-audit.mjs';
 
@@ -346,4 +348,64 @@ test('branch and UTC date filters are transmitted as encoded read-only query val
     repository: 'a/b', branch: '', fetchImpl,
   }), /--branch/);
   assert.equal(called.length, 1);
+});
+
+
+test('UTC date window accepts inclusive equal bounds and checks ordering', () => {
+  assert.deepEqual(validateDateRange({ since: '2026-10-01', until: '2026-10-12' }), {
+    since: '2026-10-01', until: '2026-10-12',
+  });
+  assert.equal(createdDateFilter({ since: '2026-10-12', until: '2026-10-12' }),
+    '2026-10-12..2026-10-12');
+  assert.equal(createdDateFilter({ since: '2026-10-01' }), '>=2026-10-01');
+  assert.equal(createdDateFilter({ until: '2026-10-12' }), '<=2026-10-12');
+  assert.equal(createdDateFilter({}), null);
+  assert.throws(() => validateDateRange({
+    since: '2026-10-13', until: '2026-10-12',
+  }), /--since must not be later than --until/);
+  assert.throws(() => validateDateRange({ until: '2026-02-30' }), /--until.*valid/);
+});
+
+test('CLI validates single-repository end dates and inverted ranges', () => {
+  assert.deepEqual(parseArgs(['a/b', '--until', '2026-10-12']), {
+    repository: 'a/b', limit: 30, json: false, until: '2026-10-12',
+  });
+  assert.deepEqual(parseArgs(['a/b', '--since', '2026-10-01',
+    '--until', '2026-10-12', '--branch', 'main']), {
+    repository: 'a/b', limit: 30, json: false,
+    since: '2026-10-01', until: '2026-10-12', branch: 'main',
+  });
+  assert.throws(() => parseArgs(['a/b', '--until']), /--until/);
+  assert.throws(() => parseArgs(['a/b', '--until', '2026-10-01',
+    '--since', '2026-10-12']), /--since must not be later/);
+});
+
+test('GitHub API date search query uses inclusive range before sampling', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    return { ok: true, json: async () => ({ workflow_runs: [] }) };
+  };
+  const report = await auditRepository({
+    repository: 'a/b', limit: 4, since: '2026-10-01',
+    until: '2026-10-12', branch: 'feature/demo', fetchImpl,
+  });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /created=2026-10-01\.\.2026-10-12/);
+  assert.match(calls[0].url, /branch=feature%2Fdemo/);
+  assert.equal(calls[0].options.method, undefined);
+  assert.equal(report.until, '2026-10-12');
+  assert.match(renderMarkdownReport(report), /Created until \(UTC\): \*\*2026-10-12\*\*/);
+  const untilOnly = await auditRepository({
+    repository: 'a/b', until: '2026-10-12', fetchImpl,
+  });
+  assert.match(calls[1].url, /created=%3C%3D2026-10-12/);
+  assert.equal(untilOnly.since, undefined);
+  assert.equal(untilOnly.until, '2026-10-12');
+  await assert.rejects(
+    auditRepository({ repository: 'a/b', since: '2026-10-13',
+      until: '2026-10-12', fetchImpl }),
+    /--since must not be later/,
+  );
+  assert.equal(calls.length, 2);
 });
