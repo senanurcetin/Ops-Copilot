@@ -4,7 +4,7 @@ description: Read-only acceptance test for Auth Boundary Bugfix custom agent
 
 # Auth Boundary Bugfix — manual acceptance
 
-Select Auth Boundary Bugfix manually in a supported Copilot IDE. Record NOT RUN if selection is not available.
+Agent invocation: use a supported IDE agent selector **or** GitHub Copilot CLI with `--agent=auth-boundary-bugfix`. CLI agent selection is valid; do not mark this test NOT RUN merely because no IDE selector was used. The wrapper must record the requested agent ID and CLI exit status independently. If the actual loaded profile cannot be independently confirmed, report agent identity UNVERIFIED separately from the source-review checks. Do not infer successful runtime tests from a read-only answer.
 
 Read:
 - src/server/auth-session.ts
