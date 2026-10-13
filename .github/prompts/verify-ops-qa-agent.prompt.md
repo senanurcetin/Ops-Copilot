@@ -4,7 +4,7 @@ description: Read-only acceptance test for Grounded Ops QA custom agent
 
 # Grounded Ops QA — manual acceptance
 
-Manually select Grounded Ops QA in a GitHub Copilot-supported IDE. If unavailable, report NOT RUN, not a successful agent test.
+Agent invocation: use a supported IDE agent selector **or** GitHub Copilot CLI with `--agent=grounded-ops-qa`. CLI agent selection is valid; do not mark this test NOT RUN merely because no IDE selector was used. The wrapper must record the requested agent ID and CLI exit status independently. If the actual loaded profile cannot be independently confirmed, report agent identity UNVERIFIED separately from the source-review checks. Do not infer successful runtime tests from a read-only answer.
 
 Read:
 - src/services/document-ranking.ts
