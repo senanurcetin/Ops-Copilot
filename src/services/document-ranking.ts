@@ -37,6 +37,9 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
     .split(' ')
     .filter((word) => word.length > 1);
   const queryWords = new Set(queryWordsArray);
+  // Numeric equipment/fault identifiers must match exactly. A query for
+  // PLC-1200 must never retrieve PLC-12001 merely because both contain PLC.
+  const requiredCodeTokens = [...queryWords].filter(word => /\d/.test(word));
 
   if (queryWords.size === 0) {
     return [];
@@ -45,6 +48,12 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
   const scoredDocs = documents.map((doc) => {
     const titleText = searchable(doc.title);
     const contentText = searchable(doc.content);
+    const titleWords = new Set(titleText.split(' '));
+    const contentWords = new Set(contentText.split(' '));
+
+    if (requiredCodeTokens.some(word => !titleWords.has(word) && !contentWords.has(word))) {
+      return { doc, score: 0 };
+    }
 
     let score = 0;
 
@@ -55,9 +64,6 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
     if (containsWholePhrase(contentText, normalizedQuery)) {
       score += 20;
     }
-
-    const titleWords = new Set(titleText.split(' '));
-    const contentWords = new Set(contentText.split(' '));
 
     let wordsFoundInTitle = 0;
     let wordsFoundInContent = 0;
