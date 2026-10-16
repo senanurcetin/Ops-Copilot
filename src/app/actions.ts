@@ -93,20 +93,28 @@ export async function logChecklistProgress(input: {
   try {
     const sessionUser = await requireCurrentSessionUser();
     const progress = parseChecklistProgress(input);
-    const userDoc = getAdminDb().collection('users').doc(sessionUser.uid);
-    const sourceSnapshot = await userDoc.collection('knowledgeDocuments')
-      .doc(progress.documentId).get();
-    assertChecklistMatchesSource(progress, sourceSnapshot.exists ? sourceSnapshot.data() ?? null : null);
+    const db = getAdminDb();
+    const userDoc = db.collection('users').doc(sessionUser.uid);
+    const sourceRef = userDoc.collection('knowledgeDocuments').doc(progress.documentId);
+    const logRef = userDoc.collection('checklistLogs').doc();
 
-    await userDoc
-      .collection('checklistLogs')
-      .add({
+    // Read the current procedure and create its evidence record in the same
+    // optimistic transaction. A concurrent source change forces a retry,
+    // rather than creating a log against stale/deleted checklist content.
+    await db.runTransaction(async transaction => {
+      const sourceSnapshot = await transaction.get(sourceRef);
+      assertChecklistMatchesSource(
+        progress,
+        sourceSnapshot.exists ? sourceSnapshot.data() ?? null : null,
+      );
+      transaction.create(logRef, {
         documentId: progress.documentId,
         documentTitle: progress.documentTitle,
         completedSteps: progress.completedSteps,
         completedStepCount: progress.completedSteps.length,
         createdAt: FieldValue.serverTimestamp(),
       });
+    });
 
     return { success: true };
   } catch (error) {
