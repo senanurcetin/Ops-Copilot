@@ -141,3 +141,10 @@ test('rankDocuments does not mistake embedded words for a matching term', () => 
   ];
   assert.deepEqual(rankDocuments(docs, 'system').map(doc => doc.id), ['match']);
 });
+
+test('rankDocuments retains partial matches for non-code descriptive questions', () => {
+  const docs = [
+    { id: 'general', title: 'Motor lubrication', content: 'Check the motor bearings.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, 'motor vibration').map(doc => doc.id), ['general']);
+});
