@@ -19,6 +19,14 @@ function searchable(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+/**
+ * Count exact normalized tokens/phrases, not partial substrings inside a
+ * different fault code or equipment identifier (S7-1200 != S7-12001).
+ */
+function containsWholePhrase(text: string, phrase: string): boolean {
+  return (` ${text} `).includes(` ${phrase} `);
+}
+
 export function rankDocuments(documents: RankedDocument[], query: string): RankedDocument[] {
   if (!documents.length) {
     return [];
@@ -40,11 +48,11 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
 
     let score = 0;
 
-    if (titleText.includes(normalizedQuery)) {
+    if (containsWholePhrase(titleText, normalizedQuery)) {
       score += 50;
     }
 
-    if (contentText.includes(normalizedQuery)) {
+    if (containsWholePhrase(contentText, normalizedQuery)) {
       score += 20;
     }
 
