@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   FIRESTORE_BATCH_WRITE_LIMIT,
+  MAX_SAMPLE_JSON_BYTES, MAX_SAMPLE_CONTENT_CHARS, MAX_SAMPLE_TITLE_CHARS,
   applyKnowledgeBaseReplacement,
   parseSampleKnowledgeBase,
   planKnowledgeBaseReplacement,
@@ -141,4 +142,20 @@ test('sample replacement reads its Firestore snapshot before scheduling mutation
   assert.match(fn, /transaction\.set\(/);
   assert.doesNotMatch(fn, /await collection\.get\(|batch\.commit\(/);
   assert.ok(fn.indexOf('await transaction.get(collection)') < fn.indexOf('applyKnowledgeBaseReplacement('));
+});
+
+
+test('parser enforces title and content bounds before writing documents', () => {
+  const document = { id: 'safe', title: 'T'.repeat(MAX_SAMPLE_TITLE_CHARS), content: 'X'.repeat(MAX_SAMPLE_CONTENT_CHARS) };
+  assert.deepEqual(parseSampleKnowledgeBase(JSON.stringify([document])), [document]);
+  assert.throws(() => parseSampleKnowledgeBase(JSON.stringify([{ ...document, title: 'T'.repeat(MAX_SAMPLE_TITLE_CHARS + 1) }])), /invalid document fields/);
+  assert.throws(() => parseSampleKnowledgeBase(JSON.stringify([{ ...document, content: 'X'.repeat(MAX_SAMPLE_CONTENT_CHARS + 1) }])), /invalid document fields/);
+});
+
+test('parser rejects a byte-oversized fixture before JSON decoding or Firestore writes', () => {
+  const oversized = 'x'.repeat(MAX_SAMPLE_JSON_BYTES + 1);
+  assert.throws(() => parseSampleKnowledgeBase(oversized), /byte limit/);
+  const boundary = JSON.stringify([{ id: 'd', title: 'valid', content: 'ok' }]);
+  assert.ok(Buffer.byteLength(boundary, 'utf8') <= MAX_SAMPLE_JSON_BYTES);
+  assert.equal(parseSampleKnowledgeBase(boundary)[0]?.id, 'd');
 });
