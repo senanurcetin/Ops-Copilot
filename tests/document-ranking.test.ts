@@ -148,3 +148,19 @@ test('rankDocuments retains partial matches for non-code descriptive questions',
   ];
   assert.deepEqual(rankDocuments(docs, 'motor vibration').map(doc => doc.id), ['general']);
 });
+
+test('rankDocuments does not splice tokens from two equipment IDs into a false match', () => {
+  const docs = [
+    { id: 'combined', title: 'S7-1500 and PLC-1200 diagnostics', content: 'Separate controller families.' },
+    { id: 'exact', title: 'S7-1200 diagnostics', content: 'Check the SF fault LED.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, 'S7-1200').map(doc => doc.id), ['exact']);
+  assert.deepEqual(rankDocuments(docs, 'S7-1200 diagnostics').map(doc => doc.id), ['exact']);
+});
+
+test('rankDocuments permits code phrases in document content and ordinary partial prose matches', () => {
+  const docs = [
+    { id: 'manual', title: 'PLC fault guides', content: 'For S7-1200 check wiring and restart.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, 'S7-1200 maintenance').map(doc => doc.id), ['manual']);
+});
