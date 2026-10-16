@@ -10,6 +10,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { logChecklistProgress } from '@/app/actions';
+import { splitFirstLiteralHighlight } from '@/lib/highlight-text';
 
 interface ContextInspectorProps {
   isOpen: boolean;
@@ -36,26 +37,18 @@ const Highlight = ({ text, highlight }: { text: string; highlight: string | null
     }
   }, [highlight, text]); // Rerun when the source text or quote changes
 
-  if (!highlight || !text.toLowerCase().includes(highlight.toLowerCase())) {
+  const parts = splitFirstLiteralHighlight(text, highlight);
+  if (!parts.some(part => part.highlighted)) {
     return <>{text}</>;
   }
-  
-  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
-  let firstMatch = true;
 
   return (
     <>
-      {parts.map((part, i) => {
-        if (firstMatch && part.toLowerCase() === highlight.toLowerCase()) {
-          firstMatch = false;
-          return (
-            <mark key={i} ref={highlightRef} className="bg-transparent rounded-sm px-0.5">
-              {part}
-            </mark>
-          );
-        }
-        return part;
-      })}
+      {parts.map((part, i) => part.highlighted ? (
+        <mark key={i} ref={highlightRef} className="bg-transparent rounded-sm px-0.5">
+          {part.text}
+        </mark>
+      ) : part.text)}
     </>
   );
 };
