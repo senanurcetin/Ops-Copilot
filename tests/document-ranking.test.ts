@@ -92,3 +92,35 @@ test('rankDocuments preserves input order for equal relevance scores', () => {
 test('rankDocuments handles an empty document corpus', () => {
   assert.deepEqual(rankDocuments([], 'system fault'), []);
 });
+
+test('industrial Turkish terms are searchable even when mostly non-ASCII', () => {
+  const docs = [
+    { id: 'thermal', title: 'Isı kontrolü', content: 'Sıcaklık sensörü alarmı' },
+    { id: 'lamp', title: 'Işık arızası', content: 'İkaz lambasını kontrol edin.' },
+    { id: 'unrelated', title: 'Sevkiyat', content: 'Üretim takvimi' },
+  ];
+  assert.equal(rankDocuments(docs, 'ısı')[0]?.id, 'thermal');
+  assert.equal(rankDocuments(docs, 'ışık')[0]?.id, 'lamp');
+  assert.equal(rankDocuments(docs, 'ISI')[0]?.id, 'thermal');
+});
+
+test('decomposed accents and punctuation preserve word boundaries', () => {
+  const docs = [
+    { id: 'fault', title: 'Motor - S7-1200 arıza prosedürü', content: 'Bölüm 3' },
+    { id: 'other', title: 'Bakım', content: 'Hidrolik basınç' },
+  ];
+  assert.equal(rankDocuments(docs, 's7-1200')[0]?.id, 'fault');
+  assert.equal(rankDocuments(docs, 'Motor—S7-1200')[0]?.id, 'fault');
+  assert.equal(rankDocuments(docs, 'arıza')[0]?.id, 'fault');
+  assert.deepEqual(rankDocuments(docs, '?!;'), []);
+});
+
+test('normalization remains order-stable and does not mutate source strings', () => {
+  const docs = [
+    { id: 'a', title: 'Isı', content: 'PLC' },
+    { id: 'b', title: 'ISI', content: 'PLC' },
+  ];
+  const before = structuredClone(docs);
+  assert.deepEqual(rankDocuments(docs, 'ısı').map(doc => doc.id), ['a', 'b']);
+  assert.deepEqual(docs, before);
+});
