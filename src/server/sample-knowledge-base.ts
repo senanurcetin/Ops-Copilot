@@ -12,9 +12,17 @@ export interface KnowledgeDocument {
 
 export const FIRESTORE_BATCH_WRITE_LIMIT = 500;
 const MAX_SAMPLE_DOCUMENTS = 500;
+export const MAX_SAMPLE_JSON_BYTES = 1_000_000;
+export const MAX_SAMPLE_TITLE_CHARS = 256;
+export const MAX_SAMPLE_CONTENT_CHARS = 12_000;
 const DOCUMENT_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 export function parseSampleKnowledgeBase(raw: string): KnowledgeDocument[] {
+  // Bound the entire uploaded fixture before parsing JSON into objects. Limit
+  // prompt-context growth and Firestore document sizes before any mutation.
+  if (Buffer.byteLength(raw, 'utf8') > MAX_SAMPLE_JSON_BYTES) {
+    throw new Error('Sample knowledge base exceeds the input byte limit.');
+  }
   const decoded: unknown = JSON.parse(raw);
   if (!Array.isArray(decoded) || decoded.length === 0 || decoded.length > MAX_SAMPLE_DOCUMENTS) {
     throw new Error('Sample knowledge base must be a nonempty, bounded array.');
@@ -29,7 +37,9 @@ export function parseSampleKnowledgeBase(raw: string): KnowledgeDocument[] {
     const record = entry as Record<string, unknown>;
     if (typeof record.id !== 'string' || !DOCUMENT_ID.test(record.id)
       || typeof record.title !== 'string' || !record.title.trim()
-      || typeof record.content !== 'string' || !record.content.trim()) {
+      || record.title.length > MAX_SAMPLE_TITLE_CHARS
+      || typeof record.content !== 'string' || !record.content.trim()
+      || record.content.length > MAX_SAMPLE_CONTENT_CHARS) {
       throw new Error('Sample knowledge base contains invalid document fields.');
     }
     if (ids.has(record.id)) {
