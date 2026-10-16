@@ -7,6 +7,7 @@ import { collection, addDoc, serverTimestamp, type FieldValue } from 'firebase/f
 
 import type { ChatMessage as ChatMessageType, Document } from '@/lib/types';
 import { handleUserMessage } from '@/app/actions';
+import { MAX_QUESTION_CHARS, MAX_HISTORY_TURNS } from '@/lib/chat-constraints';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Sparkles, Loader2 } from 'lucide-react';
@@ -70,10 +71,12 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
 
     try {
       // Prepare history for AI, including the new question
+      // The question is already a separate prompt field: do not repeat it
+      // as a synthetic history turn or send an unbounded transcript.
       const historyForAI = messages
         .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && msg.id !== 'initial-welcome')
-        .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }));
-      historyForAI.push({ role: 'user', content: question });
+        .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }))
+        .slice(-MAX_HISTORY_TURNS);
 
       const { answer, sources, keyQuote } = await handleUserMessage(question, historyForAI);
 
@@ -164,6 +167,7 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
           <form onSubmit={handleSubmit} className="relative">
             <Textarea
               value={input}
+              maxLength={MAX_QUESTION_CHARS}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
               placeholder="Ask a question about your operations..."
@@ -176,6 +180,9 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
               <span className="sr-only">Send</span>
             </Button>
           </form>
+          <p className="mt-1 text-right text-xs text-muted-foreground">
+            {input.length}/{MAX_QUESTION_CHARS} characters
+          </p>
         </div>
       </div>
     </div>
