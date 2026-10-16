@@ -7,7 +7,8 @@ import { collection, addDoc, serverTimestamp, type FieldValue } from 'firebase/f
 
 import type { ChatMessage as ChatMessageType, Document } from '@/lib/types';
 import { handleUserMessage } from '@/app/actions';
-import { MAX_QUESTION_CHARS, MAX_HISTORY_TURNS } from '@/lib/chat-constraints';
+import { MAX_QUESTION_CHARS } from '@/lib/chat-constraints';
+import { boundedChatHistory } from '@/lib/chat-history';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Sparkles, Loader2 } from 'lucide-react';
@@ -73,10 +74,7 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
       // Prepare history for AI, including the new question
       // The question is already a separate prompt field: do not repeat it
       // as a synthetic history turn or send an unbounded transcript.
-      const historyForAI = messages
-        .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && msg.id !== 'initial-welcome')
-        .map(({ role, content }) => ({ role: role as 'user' | 'assistant', content }))
-        .slice(-MAX_HISTORY_TURNS);
+      const historyForAI = boundedChatHistory(messages);
 
       const { answer, sources, keyQuote } = await handleUserMessage(question, historyForAI);
 
