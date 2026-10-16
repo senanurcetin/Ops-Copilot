@@ -103,3 +103,12 @@ test('authenticated checklist action fetches current user-owned evidence before 
   assert.ok(read > 0 && verify > read && write > verify);
   assert.match(action, /sourceSnapshot\.exists/);
 });
+
+
+test('checklist inspector resets state on document identity changes and disables duplicate submissions', () => {
+  const code = readFileSync(new URL('../src/components/context-inspector.tsx', import.meta.url), 'utf8');
+  assert.match(code, /\[documentId, content\]/);
+  assert.match(code, /if \(isLogging\) return;/);
+  assert.match(code, /disabled=\{isLogging\}/);
+  assert.match(code, /finally \{\s*setIsLogging\(false\)/);
+});

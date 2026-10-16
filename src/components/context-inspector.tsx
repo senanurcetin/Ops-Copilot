@@ -75,40 +75,54 @@ const ChecklistContent = ({
     .map(({ match, index }) => ({ id: `step-${index}`, text: match![1] }));
   
   const [checkedState, setCheckedState] = useState<Record<string, boolean>>({});
+  const [isLogging, setIsLogging] = useState(false);
 
-  // Reset checked state when the document content changes
+  // A different source may have identical text. Never carry its completion
+  // ticks into another document's maintenance record.
   useEffect(() => {
     setCheckedState({});
-  }, [content]);
+  }, [documentId, content]);
 
   const handleCheckChange = (id: string) => {
     setCheckedState(prev => ({...prev, [id]: !prev[id]}));
   };
 
   const handleLogProgress = async () => {
-    const completedSteps = checklistItems
-      .filter(item => checkedState[item.id])
-      .map(item => item.text);
+    if (isLogging) return;
+    setIsLogging(true);
+    try {
+      const completedSteps = checklistItems
+        .filter(item => checkedState[item.id])
+        .map(item => item.text);
 
-    const result = await logChecklistProgress({
-      documentId,
-      documentTitle,
-      completedSteps,
-    });
+      const result = await logChecklistProgress({
+        documentId,
+        documentTitle,
+        completedSteps,
+      });
 
-    if (!result.success) {
+      if (!result.success) {
+        toast({
+          variant: 'destructive',
+          title: 'Progress Log Failed',
+          description: result.message,
+        });
+        return;
+      }
+
+      toast({
+        title: 'Progress Logged',
+        description: `${completedSteps.length} step(s) have been logged for maintenance records.`,
+      });
+    } catch {
       toast({
         variant: 'destructive',
         title: 'Progress Log Failed',
-        description: result.message,
+        description: 'Could not log checklist progress.',
       });
-      return;
+    } finally {
+      setIsLogging(false);
     }
-
-    toast({
-      title: 'Progress Logged',
-      description: `${completedSteps.length} step(s) have been logged for maintenance records.`,
-    });
   };
 
   const isChecklist = checklistItems.length > 0;
@@ -141,7 +155,7 @@ const ChecklistContent = ({
         );
       })}
       {isChecklist && (
-        <Button onClick={handleLogProgress} className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700">
+        <Button onClick={handleLogProgress} disabled={isLogging} className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700">
           <ClipboardCheck className="mr-2 h-4 w-4" />
           Log Progress
         </Button>
