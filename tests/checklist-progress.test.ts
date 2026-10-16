@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseChecklistProgress } from '../src/server/checklist-progress';
+import { assertChecklistMatchesSource, parseChecklistProgress } from '../src/server/checklist-progress';
 
 const valid = {
   documentId: 'manual-1',
@@ -60,4 +60,46 @@ test('server action authenticates and validates before persisting a checklist', 
   const persist = action.indexOf(".collection('checklistLogs')");
   assert.ok(auth >= 0 && validate > auth && persist > validate);
   assert.match(action, /completedStepCount: progress\.completedSteps\.length/);
+});
+
+
+test('checklist progress is verified against an existing workspace source', () => {
+  const progress = parseChecklistProgress({
+    documentId: 'manual-1',
+    documentTitle: 'Pump inspection',
+    completedSteps: ['Lockout completed'],
+  });
+  const source = { title: 'Pump inspection', content: '1. Lockout completed\n2. Pressure verified' };
+  assert.doesNotThrow(() => assertChecklistMatchesSource(progress, source));
+  assert.throws(() => assertChecklistMatchesSource(progress, null), /missing or has changed/);
+  assert.throws(() => assertChecklistMatchesSource(progress, { ...source, title: 'Other pump' }), /missing or has changed/);
+  assert.throws(() => assertChecklistMatchesSource(
+    { ...progress, completedSteps: ['Bypass the safety interlock'] }, source
+  ), /not present/);
+  assert.throws(() => assertChecklistMatchesSource(
+    { ...progress, completedSteps: ['Pressure verified externally'] }, source
+  ), /not present/);
+});
+
+test('free prose cannot be submitted as a completed numbered checklist step', () => {
+  const progress = parseChecklistProgress({
+    documentId: 'manual-1',
+    documentTitle: 'Pump inspection',
+    completedSteps: ['Do not ignore alarms'],
+  });
+  assert.throws(() => assertChecklistMatchesSource(progress, {
+    title: 'Pump inspection',
+    content: 'Safety: Do not ignore alarms\n1. Isolate power',
+  }), /not present/);
+});
+
+test('authenticated checklist action fetches current user-owned evidence before logging', () => {
+  const code = readFileSync(new URL('../src/app/actions.ts', import.meta.url), 'utf8');
+  const action = code.split('export async function logChecklistProgress(')[1];
+  assert.ok(action);
+  const read = action.indexOf(".collection('knowledgeDocuments')");
+  const verify = action.indexOf('assertChecklistMatchesSource(');
+  const write = action.indexOf(".collection('checklistLogs')");
+  assert.ok(read > 0 && verify > read && write > verify);
+  assert.match(action, /sourceSnapshot\.exists/);
 });
