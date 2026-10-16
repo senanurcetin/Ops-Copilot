@@ -80,3 +80,16 @@ test('client history excludes welcome, irrelevant and blank entries before the l
   assert.equal(bounded.at(-1)?.content, 'turn-14');
   assert.doesNotThrow(() => validateChatInput('next', bounded));
 });
+
+
+test('chat send locks synchronously and keeps unsent drafts when auth is unavailable', () => {
+  const component = readFileSync(new URL('../src/components/chat-interface.tsx', import.meta.url), 'utf8');
+  assert.match(component, /const sendingRef = useRef\(false\)/);
+  assert.match(component, /if \(!question \|\| sendingRef\.current \|\| !user \|\| !firestore\) return false/);
+  const locked = component.indexOf('sendingRef.current = true');
+  const firestoreWrite = component.indexOf('addDoc(messagesCollection, userMessage)');
+  assert.ok(locked > 0 && locked < firestoreWrite);
+  assert.match(component, /finally \{\s*sendingRef\.current = false/);
+  assert.match(component, /if \(await sendMessage\(submitted\)\)/);
+  assert.match(component, /setInput\(current => current === submitted \? '' : current\)/);
+});
