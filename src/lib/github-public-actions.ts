@@ -64,7 +64,7 @@ export function summarizePublicActions(repository: string, payload: unknown): Pu
       event: run.event,
       conclusion: run.conclusion,
       created_at: run.created_at,
-      html_url: expected,
+      html_url: run.html_url,
     };
   });
   const failed = runs.filter(r => r.conclusion === 'failure').length;
