@@ -2,6 +2,7 @@
 
 import { obtainAnswersFromDocuments } from '@/ai/flows/obtain-answers-from-documents';
 import { searchDocuments, replaceSampleDocuments, getKnowledgeBaseStats, type Document } from '@/services/vector-store';
+import { verifiedKeyQuote } from '@/services/source-evidence';
 import { parseSampleKnowledgeBase } from '@/server/sample-knowledge-base';
 import { parseChecklistProgress } from '@/server/checklist-progress';
 import { SessionAuthError, requireCurrentSessionUser } from '@/server/auth-session';
@@ -48,7 +49,11 @@ export async function handleUserMessage(question: string, chatHistory: ChatHisto
       .join('\n\n---\n\n');
 
     const result = await obtainAnswersFromDocuments({ question, context, chatHistory });
-    return { answer: result.answer, sources: relevantDocs, keyQuote: result.keyQuote };
+    return {
+      answer: result.answer,
+      sources: relevantDocs,
+      keyQuote: verifiedKeyQuote(relevantDocs, result.keyQuote),
+    };
   } catch (error) {
     if (error instanceof SessionAuthError) {
       return {
