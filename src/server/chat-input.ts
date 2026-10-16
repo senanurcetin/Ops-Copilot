@@ -4,9 +4,8 @@
  */
 export type ChatHistoryItem = { role: 'user' | 'assistant'; content: string };
 
-export const MAX_QUESTION_CHARS = 4000;
-export const MAX_HISTORY_TURNS = 12;
-export const MAX_TURN_CHARS = 2000;
+import { MAX_QUESTION_CHARS, MAX_HISTORY_TURNS, MAX_TURN_CHARS } from '@/lib/chat-constraints';
+export { MAX_QUESTION_CHARS, MAX_HISTORY_TURNS, MAX_TURN_CHARS } from '@/lib/chat-constraints';
 
 export class ChatInputError extends Error {
   constructor(message: string) {
