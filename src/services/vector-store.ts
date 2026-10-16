@@ -6,7 +6,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/server/firebase-admin';
 import { rankDocuments } from './document-ranking';
-import { applyKnowledgeBaseReplacement, type KnowledgeDocument } from '@/server/sample-knowledge-base';
+import { applyKnowledgeBaseReplacement, assertFirestoreBatchCapacity, type KnowledgeDocument } from '@/server/sample-knowledge-base';
 
 export interface Document {
   id: string;
@@ -36,6 +36,7 @@ async function getAllDocuments(userId: string): Promise<Document[]> {
  * Stores documents in a per-user Firestore-backed knowledge collection.
  */
 export async function storeDocuments(userId: string, docs: Document[]): Promise<void> {
+  assertFirestoreBatchCapacity(docs.length);
   const batch = getAdminDb().batch();
   const knowledgeCollection = getKnowledgeCollection(userId);
 
@@ -114,6 +115,8 @@ export async function clearDocuments(userId: string): Promise<void> {
     return;
   }
 
+  // Do not partially clear a collection that cannot fit in one atomic batch.
+  assertFirestoreBatchCapacity(snapshot.size);
   const batch = getAdminDb().batch();
   snapshot.docs.forEach((docSnapshot) => {
     batch.delete(docSnapshot.ref);

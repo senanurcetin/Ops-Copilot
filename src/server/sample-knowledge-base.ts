@@ -11,6 +11,14 @@ export interface KnowledgeDocument {
 }
 
 export const FIRESTORE_BATCH_WRITE_LIMIT = 500;
+
+/** Fail before mutating Firestore when a single-batch write cannot be atomic. */
+export function assertFirestoreBatchCapacity(count: number): void {
+  if (!Number.isSafeInteger(count) || count < 0 || count > FIRESTORE_BATCH_WRITE_LIMIT) {
+    throw new RangeError('Firestore atomic batch exceeds the write limit.');
+  }
+}
+
 const MAX_SAMPLE_DOCUMENTS = 500;
 export const MAX_SAMPLE_JSON_BYTES = 1_000_000;
 export const MAX_SAMPLE_TITLE_CHARS = 256;
