@@ -55,3 +55,21 @@ test('public demo keeps user-provided API fields out of untrusted output URLs', 
   assert.equal(safe.runs[0].html_url, 'https://github.com/owner/project/actions/runs/5');
   assert.equal('token' in safe, false);
 });
+
+test('canonical GitHub URL casing does not reject a public repository', () => {
+  const payload = { total_count: 1, workflow_runs: [{
+    id: 42, name: 'CI', event: 'push', status: 'completed',
+    conclusion: 'success', created_at: '2026-10-16T10:00:00Z',
+    html_url: 'https://github.com/senanurcetin/Ops-Copilot/actions/runs/42',
+  }] };
+  const summary = summarizePublicActions('SenanurCetin/OPS-COPILOT', payload);
+  assert.equal(summary.inspected_runs, 1);
+  assert.equal(summary.successful_runs, 1);
+  // A link returned to the browser keeps GitHub's canonical spelling.
+  assert.equal(summary.runs[0].html_url, payload.workflow_runs[0].html_url);
+  assert.throws(() => summarizePublicActions('another-owner/OPS-COPILOT', payload));
+  assert.throws(() => summarizePublicActions('SenanurCetin/OPS-COPILOT', {
+    total_count: 1, workflow_runs: [{ ...payload.workflow_runs[0], html_url:
+      'https://github.com/senanurcetin/Ops-Copilot/actions/runs/43' }],
+  }));
+});
