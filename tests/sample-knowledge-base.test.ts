@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   FIRESTORE_BATCH_WRITE_LIMIT,
+  assertFirestoreBatchCapacity,
   MAX_SAMPLE_JSON_BYTES, MAX_SAMPLE_CONTENT_CHARS, MAX_SAMPLE_TITLE_CHARS,
   applyKnowledgeBaseReplacement,
   parseSampleKnowledgeBase,
@@ -158,4 +159,24 @@ test('parser rejects a byte-oversized fixture before JSON decoding or Firestore 
   const boundary = JSON.stringify([{ id: 'd', title: 'valid', content: 'ok' }]);
   assert.ok(Buffer.byteLength(boundary, 'utf8') <= MAX_SAMPLE_JSON_BYTES);
   assert.equal(parseSampleKnowledgeBase(boundary)[0]?.id, 'd');
+});
+
+
+test('atomic Firestore batch bound allows exactly 500 writes and rejects excess', () => {
+  assert.doesNotThrow(() => assertFirestoreBatchCapacity(0));
+  assert.doesNotThrow(() => assertFirestoreBatchCapacity(FIRESTORE_BATCH_WRITE_LIMIT));
+  for (const count of [-1, 500.5, 501, Number.POSITIVE_INFINITY, Number.NaN]) {
+    assert.throws(() => assertFirestoreBatchCapacity(count), /atomic batch exceeds/);
+  }
+});
+
+test('direct store and clear paths fail before scheduling an oversized batch', () => {
+  const source = readFileSync(new URL('../src/services/vector-store.ts', import.meta.url), 'utf8');
+  const store = source.split('export async function storeDocuments(')[1]?.split('export async function replaceSampleDocuments(')[0];
+  const clear = source.split('export async function clearDocuments(')[1];
+  assert.ok(store && clear);
+  assert.match(store, /assertFirestoreBatchCapacity\(docs\.length\)/);
+  assert.ok(store.indexOf('assertFirestoreBatchCapacity') < store.indexOf('getAdminDb().batch()'));
+  assert.match(clear, /assertFirestoreBatchCapacity\(snapshot\.size\)/);
+  assert.ok(clear.indexOf('assertFirestoreBatchCapacity') < clear.indexOf('getAdminDb().batch()'));
 });
