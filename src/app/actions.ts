@@ -5,26 +5,18 @@ import { searchDocuments, replaceSampleDocuments, getKnowledgeBaseStats, type Do
 import { verifiedKeyQuote } from '@/services/source-evidence';
 import { parseSampleKnowledgeBase } from '@/server/sample-knowledge-base';
 import { parseChecklistProgress } from '@/server/checklist-progress';
+import { ChatInputError, validateChatInput, type ChatHistoryItem } from '@/server/chat-input';
 import { SessionAuthError, requireCurrentSessionUser } from '@/server/auth-session';
 import { getAdminDb } from '@/server/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Define the type for the history items passed to the action.
-type ChatHistoryItem = {
-  role: 'user' | 'assistant';
-  content: string;
-};
-
 export async function handleUserMessage(question: string, chatHistory: ChatHistoryItem[]): Promise<{ answer: string; sources: Document[]; keyQuote?: string }> {
-  if (!question.trim()) {
-    return { answer: 'Please ask a question.', sources: [] };
-  }
-
   try {
+    const input = validateChatInput(question, chatHistory);
     const sessionUser = await requireCurrentSessionUser();
-    const relevantDocs = await searchDocuments(sessionUser.uid, question);
+    const relevantDocs = await searchDocuments(sessionUser.uid, input.question);
 
     if (relevantDocs.length === 0) {
       const { documentCount } = await getKnowledgeBaseStats(sessionUser.uid);
@@ -48,13 +40,16 @@ export async function handleUserMessage(question: string, chatHistory: ChatHisto
       .map(doc => `Title: ${doc.title}\nContent: ${doc.content}`)
       .join('\n\n---\n\n');
 
-    const result = await obtainAnswersFromDocuments({ question, context, chatHistory });
+    const result = await obtainAnswersFromDocuments({ question: input.question, context, chatHistory: input.chatHistory });
     return {
       answer: result.answer,
       sources: relevantDocs,
       keyQuote: verifiedKeyQuote(relevantDocs, result.keyQuote),
     };
   } catch (error) {
+    if (error instanceof ChatInputError) {
+      return { answer: error.message, sources: [] };
+    }
     if (error instanceof SessionAuthError) {
       return {
         answer: 'Your session has expired. Please sign in again to continue.',
