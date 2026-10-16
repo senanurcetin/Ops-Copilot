@@ -25,3 +25,11 @@ test('does not mark unsupported or empty quotes and never alters the text', () =
   assert.deepEqual(splitFirstLiteralHighlight(text, null), [{ text, highlighted: false }]);
   assert.deepEqual(splitFirstLiteralHighlight(text, ''), [{ text, highlighted: false }]);
 });
+
+
+test('preserves source offsets when Turkish dotted capitals expand during lowercase', () => {
+  const text = 'İkaz lambası — PANEL (P+I) arızası';
+  const parts = splitFirstLiteralHighlight(text, 'PANEL (P+I)');
+  assert.equal(parts.find(part => part.highlighted)?.text, 'PANEL (P+I)');
+  assert.equal(parts.map(part => part.text).join(''), text);
+});
