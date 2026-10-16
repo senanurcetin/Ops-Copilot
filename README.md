@@ -1,5 +1,7 @@
 # Ops-Copilot — Document-Grounded Industrial AI Assistant
 
+<p align="right"><img src="docs/assets/nexus-official-midnight.svg" alt="NEXUS Official Midnight brand" width="220"></p>
+
 **Next.js · Firebase · Genkit/Gemini · Document retrieval · Operator checklists · SECOM ML case study**
 
 Ops-Copilot is an industrial AI assistant for factory operators who need fast, document-grounded troubleshooting support on the production floor. It now also includes a public industrial data science case study built on the UCI SECOM manufacturing dataset, so the repository demonstrates both product engineering and applied ML reasoning.
