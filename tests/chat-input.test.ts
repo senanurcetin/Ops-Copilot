@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   validateChatInput, ChatInputError, MAX_HISTORY_TURNS,
   MAX_QUESTION_CHARS, MAX_TURN_CHARS,
@@ -40,4 +41,12 @@ test('rejects malformed and oversized history without passing untrusted objects'
 test('prevents retaining arbitrary caller-provided history metadata', () => {
   const input = [{ role: 'user', content: 'alarm', secret: 'do-not-forward' }];
   assert.deepEqual(validateChatInput('check', input).chatHistory, [{ role: 'user', content: 'alarm' }]);
+});
+
+test('client enforces server chat limits and avoids duplicating the current question in prompt history', () => {
+  const source = readFileSync(new URL('../src/components/chat-interface.tsx', import.meta.url), 'utf8');
+  assert.match(source, /maxLength=\{MAX_QUESTION_CHARS\}/);
+  assert.match(source, /\.slice\(-MAX_HISTORY_TURNS\)/);
+  assert.doesNotMatch(source, /historyForAI\.push\(/);
+  assert.match(source, /handleUserMessage\(question, historyForAI\)/);
 });
