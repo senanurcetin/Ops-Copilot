@@ -97,9 +97,9 @@ test('authenticated checklist action fetches current user-owned evidence before 
   const code = readFileSync(new URL('../src/app/actions.ts', import.meta.url), 'utf8');
   const action = code.split('export async function logChecklistProgress(')[1];
   assert.ok(action);
-  const read = action.indexOf(".collection('knowledgeDocuments')");
+  const read = action.indexOf('await transaction.get(sourceRef)');
   const verify = action.indexOf('assertChecklistMatchesSource(');
-  const write = action.indexOf(".collection('checklistLogs')");
+  const write = action.indexOf('transaction.create(logRef, {');
   assert.ok(read > 0 && verify > read && write > verify);
   assert.match(action, /sourceSnapshot\.exists/);
 });
