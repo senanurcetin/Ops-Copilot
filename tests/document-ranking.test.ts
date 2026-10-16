@@ -164,3 +164,20 @@ test('rankDocuments permits code phrases in document content and ordinary partia
   ];
   assert.deepEqual(rankDocuments(docs, 'S7-1200 maintenance').map(doc => doc.id), ['manual']);
 });
+
+
+test('rankDocuments does not fabricate Siemens hexadecimal fault-code matches from separate tokens', () => {
+  const docs = [
+    { id: 'mismatch', title: 'Fault 16 report', content: 'See alarm 800D on a different system.' },
+    { id: 'exact', title: 'Motion error 16#800D', content: 'Command interrupted by another motion command.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, '16#800D').map(doc => doc.id), ['exact']);
+  assert.deepEqual(rankDocuments(docs, 'What causes 16#800D?').map(doc => doc.id), ['exact']);
+});
+
+test('rankDocuments accepts the compound hex code appearing in the document body', () => {
+  const docs = [
+    { id: 'motion', title: 'S7-1500 motion', content: 'Error 16#800D means an interrupted command.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, '16#800D').map(doc => doc.id), ['motion']);
+});

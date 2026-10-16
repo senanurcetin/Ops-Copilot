@@ -40,10 +40,10 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
   // Numeric equipment/fault identifiers must match exactly. A query for
   // PLC-1200 must never retrieve PLC-12001 merely because both contain PLC.
   const requiredCodeTokens = [...queryWords].filter(word => /\d/.test(word));
-  // Require every hyphenated equipment identifier as a contiguous phrase.
+  // Require every compound equipment / hex fault identifier as a contiguous phrase.
   // Matching tokens separately can combine "S7-1500" with "PLC-1200"
   // and falsely claim that an "S7-1200" procedure was retrieved.
-  const requiredCodePhrases = (query.match(/[\p{L}\p{N}]+(?:[-_.][\p{L}\p{N}]+)+/gu) ?? [])
+  const requiredCodePhrases = (query.match(/[\p{L}\p{N}]+(?:[-_.#][\p{L}\p{N}]+)+/gu) ?? [])
     .filter(code => /\p{N}/u.test(code))
     .map(searchable);
 
