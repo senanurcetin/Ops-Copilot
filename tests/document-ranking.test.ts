@@ -124,3 +124,27 @@ test('normalization remains order-stable and does not mutate source strings', ()
   assert.deepEqual(rankDocuments(docs, 'ısı').map(doc => doc.id), ['a', 'b']);
   assert.deepEqual(docs, before);
 });
+
+test('rankDocuments rejects substring-only matches for distinct equipment IDs', () => {
+  const docs = [
+    { id: 'wrong', title: 'PLC-12001 fault', content: 'Only PLC-12001 applies.' },
+    { id: 'correct', title: 'PLC-1200 fault', content: 'Follow the PLC-1200 checklist.' },
+  ];
+  const results = rankDocuments(docs, 'PLC-1200');
+  assert.deepEqual(results.map(doc => doc.id), ['correct']);
+});
+
+test('rankDocuments does not mistake embedded words for a matching term', () => {
+  const docs = [
+    { id: 'partial', title: 'Subsystem diagnostics', content: 'Review the subsystem.' },
+    { id: 'match', title: 'System diagnostics', content: 'Review the system.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, 'system').map(doc => doc.id), ['match']);
+});
+
+test('rankDocuments retains partial matches for non-code descriptive questions', () => {
+  const docs = [
+    { id: 'general', title: 'Motor lubrication', content: 'Check the motor bearings.' },
+  ];
+  assert.deepEqual(rankDocuments(docs, 'motor vibration').map(doc => doc.id), ['general']);
+});

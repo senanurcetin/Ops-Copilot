@@ -19,6 +19,14 @@ function searchable(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+/**
+ * Count exact normalized tokens/phrases, not partial substrings inside a
+ * different fault code or equipment identifier (S7-1200 != S7-12001).
+ */
+function containsWholePhrase(text: string, phrase: string): boolean {
+  return (` ${text} `).includes(` ${phrase} `);
+}
+
 export function rankDocuments(documents: RankedDocument[], query: string): RankedDocument[] {
   if (!documents.length) {
     return [];
@@ -29,6 +37,9 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
     .split(' ')
     .filter((word) => word.length > 1);
   const queryWords = new Set(queryWordsArray);
+  // Numeric equipment/fault identifiers must match exactly. A query for
+  // PLC-1200 must never retrieve PLC-12001 merely because both contain PLC.
+  const requiredCodeTokens = [...queryWords].filter(word => /\d/.test(word));
 
   if (queryWords.size === 0) {
     return [];
@@ -37,19 +48,22 @@ export function rankDocuments(documents: RankedDocument[], query: string): Ranke
   const scoredDocs = documents.map((doc) => {
     const titleText = searchable(doc.title);
     const contentText = searchable(doc.content);
+    const titleWords = new Set(titleText.split(' '));
+    const contentWords = new Set(contentText.split(' '));
+
+    if (requiredCodeTokens.some(word => !titleWords.has(word) && !contentWords.has(word))) {
+      return { doc, score: 0 };
+    }
 
     let score = 0;
 
-    if (titleText.includes(normalizedQuery)) {
+    if (containsWholePhrase(titleText, normalizedQuery)) {
       score += 50;
     }
 
-    if (contentText.includes(normalizedQuery)) {
+    if (containsWholePhrase(contentText, normalizedQuery)) {
       score += 20;
     }
-
-    const titleWords = new Set(titleText.split(' '));
-    const contentWords = new Set(contentText.split(' '));
 
     let wordsFoundInTitle = 0;
     let wordsFoundInContent = 0;
