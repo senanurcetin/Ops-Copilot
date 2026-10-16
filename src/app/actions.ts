@@ -4,7 +4,7 @@ import { obtainAnswersFromDocuments } from '@/ai/flows/obtain-answers-from-docum
 import { searchDocuments, replaceSampleDocuments, getKnowledgeBaseStats, type Document } from '@/services/vector-store';
 import { verifiedKeyQuote } from '@/services/source-evidence';
 import { parseSampleKnowledgeBase } from '@/server/sample-knowledge-base';
-import { parseChecklistProgress } from '@/server/checklist-progress';
+import { assertChecklistMatchesSource, parseChecklistProgress } from '@/server/checklist-progress';
 import { ChatInputError, validateChatInput, type ChatHistoryItem } from '@/server/chat-input';
 import { SessionAuthError, requireCurrentSessionUser } from '@/server/auth-session';
 import { getAdminDb } from '@/server/firebase-admin';
@@ -93,10 +93,12 @@ export async function logChecklistProgress(input: {
   try {
     const sessionUser = await requireCurrentSessionUser();
     const progress = parseChecklistProgress(input);
+    const userDoc = getAdminDb().collection('users').doc(sessionUser.uid);
+    const sourceSnapshot = await userDoc.collection('knowledgeDocuments')
+      .doc(progress.documentId).get();
+    assertChecklistMatchesSource(progress, sourceSnapshot.exists ? sourceSnapshot.data() ?? null : null);
 
-    await getAdminDb()
-      .collection('users')
-      .doc(sessionUser.uid)
+    await userDoc
       .collection('checklistLogs')
       .add({
         documentId: progress.documentId,

@@ -46,3 +46,31 @@ export function parseChecklistProgress(input: unknown): ChecklistProgress {
 
   return { documentId: entry.documentId, documentTitle, completedSteps };
 }
+
+
+/**
+ * A caller may only log steps that actually belong to its current
+ * authenticated workspace document. The title and steps are not trusted
+ * merely because they were displayed by the browser earlier.
+ */
+export function assertChecklistMatchesSource(
+  progress: ChecklistProgress,
+  source: { title?: unknown; content?: unknown } | null,
+): void {
+  if (!source || typeof source.title !== 'string' ||
+      typeof source.content !== 'string' ||
+      source.title.trim() !== progress.documentTitle) {
+    throw new Error('Checklist source is missing or has changed.');
+  }
+
+  const canonicalSteps = new Set(
+    source.content.split('\n')
+      .map(line => /^\d+\.\s(.+)/.exec(line)?.[1]?.trim())
+      .filter((step): step is string => Boolean(step)),
+  );
+  for (const step of progress.completedSteps) {
+    if (!canonicalSteps.has(step)) {
+      throw new Error('Checklist includes a step not present in the source document.');
+    }
+  }
+}
