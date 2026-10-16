@@ -97,9 +97,9 @@ test('authenticated checklist action fetches current user-owned evidence before 
   const code = readFileSync(new URL('../src/app/actions.ts', import.meta.url), 'utf8');
   const action = code.split('export async function logChecklistProgress(')[1];
   assert.ok(action);
-  const read = action.indexOf(".collection('knowledgeDocuments')");
+  const read = action.indexOf('await transaction.get(sourceRef)');
   const verify = action.indexOf('assertChecklistMatchesSource(');
-  const write = action.indexOf(".collection('checklistLogs')");
+  const write = action.indexOf('transaction.create(logRef, {');
   assert.ok(read > 0 && verify > read && write > verify);
   assert.match(action, /sourceSnapshot\.exists/);
 });
@@ -111,4 +111,19 @@ test('checklist inspector resets state on document identity changes and disables
   assert.match(code, /if \(isLogging\) return;/);
   assert.match(code, /disabled=\{isLogging\}/);
   assert.match(code, /finally \{\s*setIsLogging\(false\)/);
+});
+
+
+test('checklist source verification and audit record creation are one Firestore transaction', () => {
+  const code = readFileSync(new URL('../src/app/actions.ts', import.meta.url), 'utf8');
+  const action = code.split('export async function logChecklistProgress(')[1];
+  assert.ok(action);
+  const transactionStart = action.indexOf('await db.runTransaction(async transaction => {');
+  const read = action.indexOf('await transaction.get(sourceRef)');
+  const verify = action.indexOf('assertChecklistMatchesSource(');
+  const write = action.indexOf('transaction.create(logRef, {');
+  assert.ok(transactionStart > 0 && read > transactionStart);
+  assert.ok(verify > read && write > verify);
+  assert.doesNotMatch(action, /await sourceRef\.get\(/);
+  assert.doesNotMatch(action, /\.collection\('checklistLogs'\)\s*\.add\(/);
 });
