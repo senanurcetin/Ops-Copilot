@@ -51,7 +51,12 @@ export function summarizePublicActions(repository: string, payload: unknown): Pu
       throw new Error('Invalid workflow run.');
     }
     const expected = 'https://github.com/' + repository + '/actions/runs/' + run.id;
-    if (run.html_url !== expected) throw new Error('Unexpected run URL.');
+    // GitHub resolves owner/repo case-insensitively and returns its canonical casing.
+    // Compare those two path components without case sensitivity, while still
+    // requiring the exact trusted host, route, and run id.
+    if (run.html_url.toLowerCase() !== expected.toLowerCase()) {
+      throw new Error('Unexpected run URL.');
+    }
     return {
       id: run.id as number,
       name: run.name,
@@ -59,7 +64,7 @@ export function summarizePublicActions(repository: string, payload: unknown): Pu
       event: run.event,
       conclusion: run.conclusion,
       created_at: run.created_at,
-      html_url: expected,
+      html_url: run.html_url,
     };
   });
   const failed = runs.filter(r => r.conclusion === 'failure').length;
