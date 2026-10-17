@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Define a simple SVG for Google Icon
@@ -99,21 +100,22 @@ export default function LoginPage() {
 
     if (loading || user || isSigningIn || isSyncingSession) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-slate-100">
-                <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+            <div className="ops-login flex min-h-screen w-full items-center justify-center px-4">
+                <Loader2 className="h-12 w-12 animate-spin text-cyan-300" />
             </div>
         );
     }
 
     return (
-        <div className="flex h-screen w-full items-center justify-center bg-slate-100">
-            <Card className="w-[400px] shadow-lg">
+        <div className="ops-login flex min-h-screen w-full items-center justify-center px-4">
+            <Card className="ops-login-card w-full max-w-[440px] border-slate-700 shadow-2xl">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-900">
-                        <Bot className="h-8 w-8 text-white" />
+                    <div className="mx-auto mb-4 flex flex-col items-center gap-2">
+                        <Image src="/nexus-x.svg" width={64} height={64} alt="" aria-hidden="true" unoptimized />
+                        <Image src="/nexus-wordmark.svg" width={180} height={54} alt="NEXUS" unoptimized />
                     </div>
-                    <CardTitle className="text-2xl">Welcome to Ops-Copilot</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-2xl text-slate-50">Ops-Copilot</CardTitle>
+                    <CardDescription className="text-slate-300">
                         Sign in to access the operator dashboard, or review the public industrial data science case study.
                     </CardDescription>
                 </CardHeader>

@@ -10,8 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Ops-Copilot',
-  description: 'Your operational co-pilot, powered by GenAI.',
+  title: 'Ops-Copilot | NEXUS',
+  description: 'NEXUS Ops-Copilot: document-grounded industrial troubleshooting with reviewed checklists.',
+  icons: { icon: '/nexus-x.svg' },
 };
 
 export default function RootLayout({
