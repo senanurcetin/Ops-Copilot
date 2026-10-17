@@ -8,7 +8,13 @@ const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] }
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
   await page.goto(base + '/login', { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: 'Ops-Copilot', exact: true }).waitFor({ state: 'visible', timeout: 45000 });
+  try {
+    await page.getByRole('heading', { name: 'Ops-Copilot', exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+  } catch (error) {
+    console.error('Ops UI failure: status/body:', await page.locator('body').innerText().catch(() => 'NO BODY'));
+    console.error('Current URL:', page.url());
+    throw error;
+  }
   await page.getByRole('img', { name: 'NEXUS' }).waitFor({ state: 'visible' });
   await page.screenshot({ path: dir + '/nexus-login-desktop.png', animations: 'disabled' });
   await page.setViewportSize({ width: 390, height: 844 });
