@@ -28,6 +28,8 @@ interface ChatInterfaceProps {
 export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMessage }: ChatInterfaceProps) {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  // Unlike React state, the ref locks synchronously across rapid Enter/clicks.
+  const sendingRef = useRef(false);
   const { toast } = useToast();
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +49,11 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
     }
   }, [messages]);
 
-  const sendMessage = async (messageContent: string) => {
+  const sendMessage = async (messageContent: string): Promise<boolean> => {
     const question = messageContent.trim();
-    if (!question || isSending || !user || !firestore) return;
+    if (!question || sendingRef.current || !user || !firestore) return false;
 
+    sendingRef.current = true;
     setIsSending(true);
 
     const userMessage: Omit<ChatMessageType, 'id'> = { 
@@ -112,25 +115,33 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
       });
 
     } finally {
+      sendingRef.current = false;
       setIsSending(false);
     }
+    return true;
   };
 
   const handleChipClick = async (chipText: string) => {
     await sendMessage(chipText);
   };
 
+  const sendDraft = async () => {
+    const submitted = input;
+    // Leave the draft intact when unauthenticated or a send is in flight.
+    if (await sendMessage(submitted)) {
+      setInput(current => current === submitted ? '' : current);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await sendMessage(input);
-    setInput('');
+    await sendDraft();
   };
 
   const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      await sendMessage(input);
-      setInput('');
+      await sendDraft();
     }
   };
 
