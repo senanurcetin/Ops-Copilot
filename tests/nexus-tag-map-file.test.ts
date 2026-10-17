@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { readLocalNexusTagMap } from '../src/lib/nexus-tag-map-file';
 import { MAX_NEXUS_TAG_MAP_BYTES } from '../src/lib/nexus-tag-map';
 
@@ -50,7 +51,7 @@ test('rejects invalid, mismatched and command-bearing exports, without persistin
 });
 
 test('the local UI does not call fetch, Firestore, server actions, storage, or model API', () => {
-  const source = require('node:fs').readFileSync(
+  const source = readFileSync(
     new URL('../src/app/developer-tools/nexus-tag-map/page.tsx', import.meta.url), 'utf8',
   );
   assert.doesNotMatch(source, /\bfetch\s*\(|\baddDoc\s*\(|\blocalStorage\b|\bsessionStorage\b|\bhandleUserMessage\s*\(/);
