@@ -79,7 +79,7 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
       // as a synthetic history turn or send an unbounded transcript.
       const historyForAI = boundedChatHistory(messages);
 
-      const { answer, sources, keyQuote } = await handleUserMessage(question, historyForAI);
+      const { answer, sources, keyQuote, evidenceStatus } = await handleUserMessage(question, historyForAI);
 
       // Save assistant message (fire-and-forget with error handling)
       const assistantMessage: Omit<ChatMessageType, 'id'> = { 
@@ -87,6 +87,7 @@ export function ChatInterface({ messages, onSelectSource, isLoading, onDeleteMes
         content: answer, 
         sources, 
         keyQuote,
+        ...(evidenceStatus ? { evidenceStatus } : {}),
         createdAt: createMessageTimestamp()
       };
       addDoc(messagesCollection, assistantMessage).catch(async () => {
