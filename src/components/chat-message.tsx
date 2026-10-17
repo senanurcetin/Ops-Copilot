@@ -61,6 +61,12 @@ export function ChatMessage({ message, onSelectSource, onDeleteMessage }: ChatMe
           )}
         </div>
 
+        {isAssistant && message.evidenceStatus === 'no-verified-quote' && (
+          <p role="note" className="mt-2 text-xs text-amber-700">
+            No exact source quotation was verified for this response. Confirm operational guidance against the current manual.
+          </p>
+        )}
+
         {isAssistant && message.sources && message.sources.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {message.sources.map((source) => (

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { verifiedKeyQuote } from '../src/services/source-evidence';
+import { selectVerifiedSources, verifiedKeyQuote } from '../src/services/source-evidence';
 
 const docs = [
   { title: 'Valve shutdown', content: 'Close the discharge valve before starting the mixer.' },
@@ -46,8 +46,34 @@ test('does not emit oversized quotations or mutate the source', () => {
   assert.deepEqual(docs, snapshot);
 });
 
-test('server action verifies the quote before returning it to the browser', () => {
+
+test('references only the document containing the verified quotation', () => {
+  const a = { id: 'alice-doc', title: 'Pump isolation', content: 'Isolate the line before maintenance.' };
+  const b = { id: 'other-doc', title: 'Heat exchange', content: 'Verify coolant pump flow.' };
+  const result = selectVerifiedSources([a, b], 'Isolate the line');
+  assert.equal(result.keyQuote, 'Isolate the line');
+  assert.deepEqual(result.sources, [a]);
+});
+
+test('never treats retrieved documents as evidence when model quote is missing or fabricated', () => {
+  assert.deepEqual(selectVerifiedSources(docs, 'Invented safe procedure'), { sources: [] });
+  assert.deepEqual(selectVerifiedSources(docs, undefined), { sources: [] });
+  assert.deepEqual(selectVerifiedSources(docs, 'a'), { sources: [] });
+  assert.deepEqual(selectVerifiedSources([], 'Close the discharge valve'), { sources: [] });
+});
+
+test('matches multiple exact quoted source documents without adding unrelated records', () => {
+  const records = [
+    { id: 'a', title: 'E-stop', content: 'Verify isolation before repair.' },
+    { id: 'b', title: 'Isolation', content: 'Verify isolation before repair.' },
+    { id: 'c', title: 'Speed setting', content: 'Record rpm before tuning.' },
+  ];
+  assert.deepEqual(selectVerifiedSources(records, 'Verify isolation').sources.map(d => d.id), ['a', 'b']);
+});
+
+test('server action filters returned references through trusted quote binding', () => {
   const code = readFileSync(new URL('../src/app/actions.ts', import.meta.url), 'utf8');
-  assert.match(code, /keyQuote: verifiedKeyQuote\(relevantDocs, result\.keyQuote\)/);
-  assert.doesNotMatch(code, /keyQuote: result\.keyQuote/);
+  assert.match(code, /selectVerifiedSources\(relevantDocs, result\.keyQuote\)/);
+  assert.match(code, /sources: evidence\.sources/);
+  assert.doesNotMatch(code, /sources: relevantDocs,/);
 });
