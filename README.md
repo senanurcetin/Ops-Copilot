@@ -188,3 +188,7 @@ Developer support: [senanur.cetin.work@gmail.com](mailto:senanur.cetin.work@gmai
 ## License
 
 MIT
+
+## NEXUS read-only interoperability contract
+
+Ops-Copilot includes an offline parser for Vision2DCS's reviewed, read-only Tag Map v1. It validates untrusted JSON but does not yet import or store it, synchronize products or send PLC/DCS commands. See `src/lib/nexus-tag-map.ts` and `tests/nexus-tag-map.test.ts`.
