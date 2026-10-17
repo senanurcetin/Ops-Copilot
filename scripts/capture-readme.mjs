@@ -2,14 +2,14 @@ import { chromium } from 'playwright';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const dir = 'docs/assets';
-const base = 'http://127.0.0.1:9002';
+const base = 'http://localhost:9002';
 await mkdir(dir, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
   await page.goto(base + '/login', { waitUntil: 'domcontentloaded' });
   try {
-    await page.getByRole('heading', { name: 'Ops-Copilot', exact: true }).waitFor({ state: 'visible', timeout: 15000 });
+    await page.getByText('Ops-Copilot', { exact: true }).waitFor({ state: 'visible', timeout: 15000 });
   } catch (error) {
     console.error('Ops UI failure: status/body:', await page.locator('body').innerText().catch(() => 'NO BODY'));
     console.error('Current URL:', page.url());
