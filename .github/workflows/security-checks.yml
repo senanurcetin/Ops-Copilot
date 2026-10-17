@@ -11,7 +11,7 @@ jobs:
     name: Security Headers Check
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Check security headers in next.config
         run: |
@@ -27,7 +27,7 @@ jobs:
     name: Dependency Check
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Run OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
