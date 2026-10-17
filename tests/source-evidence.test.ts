@@ -30,11 +30,11 @@ test('rejects superficial single-character and two-character supporting quotes',
 
 test('rejects invisible, bidirectional and control-character evidence even when present in a source', () => {
   for (const injected of [
-    'Valve\\u202Eshutdown',
-    'Motor\\u200Bstatus',
-    'Reset\\nindicator',
-    '\\u2066PLC-101\\u2069',
-  ].map(value => value.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace('\\n', '\\n'))) {
+    'Valve\u202Eshutdown',
+    'Motor\u200Bstatus',
+    'Reset\nindicator',
+    '\u2066PLC-101\u2069',
+  ]) {
     const hostileDocs = [{ title: 'Reference', content: injected }];
     assert.equal(verifiedKeyQuote(hostileDocs, injected), undefined);
   }
