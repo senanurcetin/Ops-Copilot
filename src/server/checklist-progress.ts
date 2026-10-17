@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /** Validate untrusted server-action payloads before any Firestore write. */
 export interface ChecklistProgress {
   documentId: string;
@@ -56,7 +58,7 @@ export function parseChecklistProgress(input: unknown): ChecklistProgress {
 export function assertChecklistMatchesSource(
   progress: ChecklistProgress,
   source: { title?: unknown; content?: unknown } | null,
-): void {
+): string {
   if (!source || typeof source.title !== 'string' ||
       typeof source.content !== 'string' ||
       source.title.trim() !== progress.documentTitle) {
@@ -73,4 +75,10 @@ export function assertChecklistMatchesSource(
       throw new Error('Checklist includes a step not present in the source document.');
     }
   }
+  // A deterministic, domain-separated fingerprint of the *exact* procedure
+  // checked in the Firestore transaction. Future edits cannot silently alter
+  // the historical meaning of a completed-step audit log.
+  return createHash('sha256')
+    .update(JSON.stringify(['ops-checklist-source-v1', source.title, source.content]), 'utf8')
+    .digest('hex');
 }

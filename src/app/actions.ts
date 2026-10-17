@@ -103,7 +103,7 @@ export async function logChecklistProgress(input: {
     // rather than creating a log against stale/deleted checklist content.
     await db.runTransaction(async transaction => {
       const sourceSnapshot = await transaction.get(sourceRef);
-      assertChecklistMatchesSource(
+      const sourceSha256 = assertChecklistMatchesSource(
         progress,
         sourceSnapshot.exists ? sourceSnapshot.data() ?? null : null,
       );
@@ -112,6 +112,8 @@ export async function logChecklistProgress(input: {
         documentTitle: progress.documentTitle,
         completedSteps: progress.completedSteps,
         completedStepCount: progress.completedSteps.length,
+        sourceSha256,
+        sourceHashAlgorithm: 'sha256:ops-checklist-source-v1',
         createdAt: FieldValue.serverTimestamp(),
       });
     });
