@@ -31,6 +31,8 @@ test('fails closed on unsupported versions, commands, fabricated live data and m
     { ...valid, controlCommand: 'OPEN_VALVE' },
     { ...valid, source: { ...valid.source, apiToken: 'secret' } },
     { ...valid, source: { ...valid.source, projectTitle: '' } },
+    { ...valid, source: { ...valid.source, projectTitle: '   ' } },
+    { ...valid, source: { ...valid.source, projectTitle: '\u00a0' } },
     { ...valid, source: { ...valid.source, projectId: '../other-tenant' } },
     { ...valid, source: { ...valid.source, projectId: 'tenant/other' } },
     { ...valid, tags: [{ ...valid.tags[0], description: 'Hidden\u202Eoverride' }] },
