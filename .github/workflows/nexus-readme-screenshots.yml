@@ -41,6 +41,9 @@ jobs:
           node -e 'let n=0;const poll=async()=>{try{const r=await fetch("http://127.0.0.1:9002/case-study");if(r.ok)return process.exit(0)}catch{}if(++n>=150)process.exit(1);setTimeout(poll,1000)};poll()'
       - name: Screenshot public NEXUS login and SECOM case study
         run: node scripts/capture-readme.mjs
+      - name: Show local Next.js error log on failed capture
+        if: failure()
+        run: tail -n 120 /tmp/nexus-ops-next.log
       - name: Verify screenshot outputs
         run: |
           for f in docs/assets/nexus-login-desktop.png docs/assets/nexus-login-mobile.png docs/assets/nexus-secom-case-study-desktop.png docs/assets/nexus-secom-case-study-mobile.png; do
