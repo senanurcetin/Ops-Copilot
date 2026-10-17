@@ -1,9 +1,8 @@
 name: NEXUS README visual capture
 
+# Manually dispatch on a docs/nexus-readme-* branch. Browser captures only
+# change the README after verification; regular CI runs on subsequent commits.
 on:
-  push:
-    branches:
-      - docs/nexus-readme-20261017
   workflow_dispatch:
 
 permissions:
@@ -11,7 +10,7 @@ permissions:
 
 jobs:
   capture:
-    if: github.repository == 'senanurcetin/Ops-Copilot' && github.ref == 'refs/heads/docs/nexus-readme-20261017'
+    if: github.repository == 'senanurcetin/Ops-Copilot' && startsWith(github.ref, 'refs/heads/docs/nexus-readme-')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -62,5 +61,5 @@ jobs:
           git add README.md docs/assets/nexus-login-*.png docs/assets/nexus-secom-case-study-*.png
           if ! git diff --cached --quiet; then
             git commit -m "docs: capture NEXUS Ops-Copilot public browser screenshots"
-            git push origin HEAD:docs/nexus-readme-20261017
+            git push origin HEAD:"${GITHUB_REF_NAME}"
           fi
