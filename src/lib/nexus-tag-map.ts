@@ -35,6 +35,8 @@ const bounded = (v: unknown, maximum: number): v is string =>
 const SIGNAL = new Set(['AI', 'AO', 'DI', 'DO']);
 const BLOCK = new Set(['MonAnL', 'MonDiL', 'MotL', 'VlvL', 'VlvAnL', 'PIDConL']);
 const TAG = /^[A-Z]{1,4}-[0-9]{2,5}[A-Z]?$/;
+const PROJECT_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+const UNSAFE_TEXT = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069]/u;
 
 export function parseNexusTagMapV1(raw: unknown): ParsedTagMap {
   if (typeof raw !== 'string' || raw.length > MAX_NEXUS_TAG_MAP_BYTES ||
@@ -51,12 +53,13 @@ export function parseNexusTagMapV1(raw: unknown): ParsedTagMap {
   const generatedAt = value.generatedAt;
   if (typeof generatedAt !== 'string' ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(generatedAt) ||
-      Number.isNaN(Date.parse(generatedAt))) {
+      Number.isNaN(Date.parse(generatedAt)) || new Date(generatedAt).toISOString() !== generatedAt) {
     throw new Error('Invalid tag-map export timestamp.');
   }
   const source = value.source;
   if (!isRecord(source) || !allowed(source, ['product','projectId','projectTitle']) ||
       source.product !== 'Vision2DCS' || !bounded(source.projectId, 128) ||
+      !PROJECT_ID.test(source.projectId) ||
       !bounded(source.projectTitle, 500)) {
     throw new Error('Invalid tag-map project provenance.');
   }
@@ -69,7 +72,9 @@ export function parseNexusTagMapV1(raw: unknown): ParsedTagMap {
     if (!isRecord(item) || !allowed(item, ['tag','description','signalType','pcs7BlockType','engineeringUnits']) ||
         typeof item.tag !== 'string' || !TAG.test(item.tag) ||
         typeof item.description !== 'string' || item.description.length > 1000 ||
+        UNSAFE_TEXT.test(item.description) ||
         typeof item.engineeringUnits !== 'string' || item.engineeringUnits.length > 100 ||
+        UNSAFE_TEXT.test(item.engineeringUnits) ||
         !SIGNAL.has(String(item.signalType)) || !BLOCK.has(String(item.pcs7BlockType))) {
       throw new Error('Invalid or unsafe tag-map instrument.');
     }
