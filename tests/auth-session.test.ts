@@ -7,6 +7,7 @@ import {
   issueSessionCookie,
   requireSessionUser,
   resolveSessionUser,
+  isSafeFirestoreUid,
 } from '../src/server/session-core';
 
 const cookieStore = (value?: string) => ({
@@ -116,4 +117,32 @@ test('session issuance forwards the five-day lifetime and returns provider resul
   assert.equal(calls, 1);
   assert.equal(cookie, 'signed-cookie');
   assert.equal(SESSION_DURATION_MS, 432_000_000);
+});
+
+
+test('Firestore tenant UID validation rejects cross-path and control claims', () => {
+  for (const input of ['', ' ', ' uid', 'uid ', '/', '..', '.', 'other/user',
+    'user\\evil', '__reserved__', 'x'.repeat(129), 'id\nnext',
+    'id\u0000next', null, 42]) {
+    assert.equal(isSafeFirestoreUid(input), false);
+  }
+  for (const input of ['alice', 'bob', 'firebase:uid-123', 'a_b', 'x'.repeat(128)]) {
+    assert.equal(isSafeFirestoreUid(input), true);
+  }
+});
+
+test('a syntactically valid but cross-tenant UID claim is rejected before document access', async () => {
+  const malformed = await resolveSessionUser(cookieStore('token'), () => ({
+    verifySessionCookie: async () => ({ uid: 'alice/../bob' }),
+  }));
+  assert.equal(malformed, null);
+  const alice = await resolveSessionUser(cookieStore('token'), () => ({
+    verifySessionCookie: async () => ({ uid: 'alice' }),
+  }));
+  const bob = await resolveSessionUser(cookieStore('token'), () => ({
+    verifySessionCookie: async () => ({ uid: 'bob' }),
+  }));
+  assert.notEqual(alice?.uid, bob?.uid);
+  assert.equal(alice?.uid, 'alice');
+  assert.equal(bob?.uid, 'bob');
 });

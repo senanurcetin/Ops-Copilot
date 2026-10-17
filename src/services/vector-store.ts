@@ -5,6 +5,7 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/server/firebase-admin';
+import { isSafeFirestoreUid, SessionAuthError } from '@/server/session-core';
 import { rankDocuments } from './document-ranking';
 import { applyKnowledgeBaseReplacement, assertFirestoreBatchCapacity, type KnowledgeDocument } from '@/server/sample-knowledge-base';
 
@@ -15,6 +16,7 @@ export interface Document {
 }
 
 function getKnowledgeCollection(userId: string) {
+  if (!isSafeFirestoreUid(userId)) throw new SessionAuthError('Invalid workspace identity.');
   return getAdminDb().collection('users').doc(userId).collection('knowledgeDocuments');
 }
 
@@ -67,6 +69,7 @@ export async function replaceSampleDocuments(
   userId: string,
   documents: KnowledgeDocument[],
 ): Promise<void> {
+  if (!isSafeFirestoreUid(userId)) throw new SessionAuthError('Invalid workspace identity.');
   const db = getAdminDb();
   const collection = db.collection('users').doc(userId).collection('knowledgeDocuments');
 
