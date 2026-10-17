@@ -37,7 +37,8 @@ const BLOCK = new Set(['MonAnL', 'MonDiL', 'MotL', 'VlvL', 'VlvAnL', 'PIDConL'])
 const TAG = /^[A-Z]{1,4}-[0-9]{2,5}[A-Z]?$/;
 
 export function parseNexusTagMapV1(raw: unknown): ParsedTagMap {
-  if (typeof raw !== 'string' || Buffer.byteLength(raw, 'utf8') > MAX_NEXUS_TAG_MAP_BYTES) {
+  if (typeof raw !== 'string' || raw.length > MAX_NEXUS_TAG_MAP_BYTES ||
+      new TextEncoder().encode(raw).byteLength > MAX_NEXUS_TAG_MAP_BYTES) {
     throw new Error('NEXUS tag map must be a JSON file within 1 MiB.');
   }
   let value: unknown;
