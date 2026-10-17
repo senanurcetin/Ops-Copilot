@@ -189,6 +189,10 @@ Developer support: [senanur.cetin.work@gmail.com](mailto:senanur.cetin.work@gmai
 
 MIT
 
+## Offline NEXUS tag-map viewer
+
+Open the **NEXUS Tag Map** sidebar link (or visit `/developer-tools/nexus-tag-map`). Choose the reviewed JSON export from Vision2DCS. The browser validates the file (maximum 1 MiB) and displays up to 100 matching tag rows with local filtering. The file is not sent to Firestore, Genkit, server actions or local storage; switching/clearing the file discards the in-memory view. Only local reviewed-concept metadata is displayed: **this is not a verified engineering sign-off, telemetry connection or automatic equipment-control integration**. CI runs size-boundary and no-network regression tests.
+
 ## NEXUS read-only interoperability contract
 
 Ops-Copilot includes an offline parser for Vision2DCS's reviewed, read-only Tag Map v1. It validates untrusted JSON but does not yet import or store it, synchronize products or send PLC/DCS commands. See `src/lib/nexus-tag-map.ts` and `tests/nexus-tag-map.test.ts`.

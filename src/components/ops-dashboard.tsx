@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, deleteDoc, getDocs, doc } from 'firebase/firestore';
 
@@ -26,7 +27,7 @@ import { ChatInterface } from '@/components/chat-interface';
 import { ContextInspector } from '@/components/context-inspector';
 import { SystemHealthBar } from '@/components/system-health-bar';
 import { UserNav } from '@/components/user-nav';
-import { Bot, HomeIcon, Upload, Loader2, RotateCcw } from 'lucide-react';
+import { Bot, HomeIcon, Upload, Loader2, RotateCcw, FileJson } from 'lucide-react';
 import type { Document as DocumentType, ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -196,6 +197,21 @@ export function OpsDashboard() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
+            <SidebarGroup className="mt-4">
+              <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Industrial Interoperability</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={{ children: 'NEXUS Tag Map viewer' }}>
+                      <Link href="/developer-tools/nexus-tag-map">
+                        <FileJson className="h-4 w-4" />
+                        <span className="group-data-[collapsible=icon]:hidden">NEXUS Tag Map</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
             <SidebarGroup className="mt-4">
               <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Knowledge Base</SidebarGroupLabel>
               <SidebarGroupContent>
