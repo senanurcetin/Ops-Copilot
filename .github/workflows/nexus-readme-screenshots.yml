@@ -36,7 +36,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Start isolated local Next.js server
         run: |
-          npm run dev > /tmp/nexus-ops-next.log 2>&1 &
+          npm run build > /tmp/nexus-ops-next.log 2>&1
+          npx next start -p 9002 >> /tmp/nexus-ops-next.log 2>&1 &
           echo $! > /tmp/nexus-ops-next.pid
           node -e 'let n=0;const poll=async()=>{try{const r=await fetch("http://127.0.0.1:9002/case-study");if(r.ok)return process.exit(0)}catch{}if(++n>=150)process.exit(1);setTimeout(poll,1000)};poll()'
       - name: Screenshot public NEXUS login and SECOM case study
