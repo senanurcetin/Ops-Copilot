@@ -196,3 +196,22 @@ Open the **NEXUS Tag Map** sidebar link (or visit `/developer-tools/nexus-tag-ma
 ## NEXUS read-only interoperability contract
 
 Ops-Copilot includes an offline parser for Vision2DCS's reviewed, read-only Tag Map v1. It validates untrusted JSON but does not yet import or store it, synchronize products or send PLC/DCS commands. See `src/lib/nexus-tag-map.ts` and `tests/nexus-tag-map.test.ts`.
+
+
+## Firebase two-account isolation acceptance (localhost only)
+
+A security-sensitive workflow requires two separate checks:
+
+- **CI contract check:** `tests/firestore-rules-contract.test.ts` verifies that the committed `firestore.rules` keeps user profile/messages scoped to `request.auth.uid` and does not grant browser access to Admin-only `knowledgeDocuments` or `checklistLogs`.
+- **Real Firebase Emulator integration:** `tests/firestore-isolation.emulator.test.ts` creates two **anonymous test users** (Alice/Bob) in **localhost emulators**, proves own-profile/own-message access, rejects cross-user reads and writes, and confirms client access to the Admin-only subcollections is denied. The test does not create or access real Firebase users or data.
+
+To run locally (after installing the usual npm project dependencies and Firebase CLI):
+
+```bash
+npx firebase-tools emulators:exec --only auth,firestore --project demo-nexus-ops-isolation "npm run test:firestore:emulator"
+```
+
+The checked-in `firebase.json` fixes Auth to `127.0.0.1:9099` and Firestore to `127.0.0.1:8080`, with Emulator UI disabled. The integration test **refuses to run** unless both localhost emulator host environment variables match, and rejects non-demo Firebase project IDs. Use the explicit `demo-` project in the command even if your `.firebaserc` points to a real project. No service account, billed cloud resource, production rule deployment or real user data is required.
+
+**CI:** The existing Node build runs offline rules contract checks, and a separate `firestore-isolation` GitHub Actions job starts real localhost Auth/Firestore emulators with a disposable `demo-` project. A passing emulator job is stronger than source inspection but still does not prove session-cookie browser authentication, server Admin SDK behavior under a real deployment, or production tenant isolation. Those need separate authorized live acceptance. Never run `firebase deploy` as a substitute for local emulator validation.
+

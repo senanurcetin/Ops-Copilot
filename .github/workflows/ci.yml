@@ -43,3 +43,33 @@ jobs:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder.firebasestorage.app
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0000000000"
           NEXT_PUBLIC_FIREBASE_APP_ID: 1:0000000000:web:placeholder
+
+  firestore-isolation:
+    # Uses only project demo-nexus-ops-isolation and localhost emulators.
+    # Never authenticate with, deploy to or mutate a production Firebase project.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java for Firestore Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install locked app dependencies
+        run: npm ci
+
+      - name: Exercise real localhost Alice/Bob permission boundaries
+        run: npx --yes firebase-tools@14 emulators:exec --only auth,firestore --project demo-nexus-ops-isolation "npm run test:firestore:emulator"
+        env:
+          CI: '1'
+          FIREBASE_PROJECT_ID: demo-nexus-ops-isolation
