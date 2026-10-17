@@ -60,7 +60,7 @@ export function parseNexusTagMapV1(raw: unknown): ParsedTagMap {
   if (!isRecord(source) || !allowed(source, ['product','projectId','projectTitle']) ||
       source.product !== 'Vision2DCS' || !bounded(source.projectId, 128) ||
       !PROJECT_ID.test(source.projectId) ||
-      !bounded(source.projectTitle, 500)) {
+      (!bounded(source.projectTitle, 500) || !source.projectTitle.trim())) {
     throw new Error('Invalid tag-map project provenance.');
   }
   const rawTags = value.tags;
