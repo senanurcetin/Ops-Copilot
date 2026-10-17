@@ -2,7 +2,7 @@
 
 import { obtainAnswersFromDocuments } from '@/ai/flows/obtain-answers-from-documents';
 import { searchDocuments, replaceSampleDocuments, getKnowledgeBaseStats, type Document } from '@/services/vector-store';
-import { verifiedKeyQuote } from '@/services/source-evidence';
+import { selectVerifiedSources } from '@/services/source-evidence';
 import { parseSampleKnowledgeBase } from '@/server/sample-knowledge-base';
 import { assertChecklistMatchesSource, parseChecklistProgress } from '@/server/checklist-progress';
 import { ChatInputError, validateChatInput, type ChatHistoryItem } from '@/server/chat-input';
@@ -12,7 +12,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-export async function handleUserMessage(question: string, chatHistory: ChatHistoryItem[]): Promise<{ answer: string; sources: Document[]; keyQuote?: string }> {
+export async function handleUserMessage(question: string, chatHistory: ChatHistoryItem[]): Promise<{ answer: string; sources: Document[]; keyQuote?: string; evidenceStatus?: 'verified-quote' | 'no-verified-quote' }> {
   try {
     const input = validateChatInput(question, chatHistory);
     const sessionUser = await requireCurrentSessionUser();
@@ -41,10 +41,12 @@ export async function handleUserMessage(question: string, chatHistory: ChatHisto
       .join('\n\n---\n\n');
 
     const result = await obtainAnswersFromDocuments({ question: input.question, context, chatHistory: input.chatHistory });
+    const evidence = selectVerifiedSources(relevantDocs, result.keyQuote);
     return {
       answer: result.answer,
-      sources: relevantDocs,
-      keyQuote: verifiedKeyQuote(relevantDocs, result.keyQuote),
+      sources: evidence.sources,
+      keyQuote: evidence.keyQuote,
+      evidenceStatus: evidence.keyQuote ? 'verified-quote' : 'no-verified-quote',
     };
   } catch (error) {
     if (error instanceof ChatInputError) {
