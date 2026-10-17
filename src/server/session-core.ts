@@ -5,6 +5,21 @@
 export const SESSION_COOKIE_NAME = '__session';
 export const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 5;
 
+/**
+ * Authenticated Firebase UIDs must be a single safe Firestore document ID.
+ * Never let malformed token claims alter an admin-SDK document path.
+ * Firebase UIDs are up to 128 characters; slashes and control bytes cannot
+ * represent an isolated users/{uid} tenant document.
+ */
+export function isSafeFirestoreUid(uid: unknown): uid is string {
+  return typeof uid === 'string' &&
+    uid.length > 0 && uid.length <= 128 &&
+    uid.trim() === uid && uid !== '.' && uid !== '..' &&
+    !/[/\\\u0000-\u001F\u007F]/u.test(uid) &&
+    !/^__.*__$/.test(uid);
+}
+
+
 export interface SessionUser {
   uid: string;
   email: string | null;
@@ -50,7 +65,7 @@ export async function resolveSessionUser(
 
   try {
     const decoded = await getAuth().verifySessionCookie(sessionCookie, true);
-    if (typeof decoded?.uid !== 'string' || !decoded.uid.trim()) return null;
+    if (!isSafeFirestoreUid(decoded?.uid)) return null;
 
     return {
       uid: decoded.uid,
