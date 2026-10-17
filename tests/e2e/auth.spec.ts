@@ -1,35 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Authentication Flow', () => {
-  test('should display login page', async ({ page }) => {
+test.describe('Public login and protected-route contract', () => {
+  test('shows the actual Google sign-in flow rather than a nonexistent password form', async ({ page }) => {
     await page.goto('/login');
-    await expect(page).toHaveTitle(/Login/i);
-    await expect(page.locator('button:has-text("Sign in")')).toBeVisible();
+    await expect(page).toHaveTitle(/Ops-Copilot/i);
+    await expect(page.getByRole('heading', { name: 'Ops-Copilot' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'NEXUS' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+    await expect(page.locator('input[type="password"]')).toHaveCount(0);
   });
 
-  test('should navigate to dashboard after login', async ({ page }) => {
-    // This test assumes you have test user credentials set up
+  test('keeps the public case study reachable without Firebase credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'test@example.com');
-    await page.fill('input[type="password"]', 'testpassword');
-    await page.click('button:has-text("Sign in")');
-    
-    // Wait for navigation to dashboard
-    await page.waitForURL('/');
-    await expect(page).toHaveTitle(/Dashboard/i);
+    await page.getByRole('link', { name: 'View public case study' }).click();
+    await expect(page).toHaveURL(/\/case-study\/?$/);
   });
 
-  test('should handle logout', async ({ page }) => {
+  test('redirects anonymous dashboard requests to the login boundary', async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto('/');
-    
-    // Click user menu
-    await page.click('button[data-testid="user-menu"]');
-    
-    // Click logout
-    await page.click('button:has-text("Logout")');
-    
-    // Should redirect to login
-    await page.waitForURL('/login');
-    expect(page.url()).toContain('login');
+    await expect(page).toHaveURL(/\/login\/?$/);
   });
 });
