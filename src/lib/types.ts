@@ -12,5 +12,6 @@ export interface ChatMessage {
   content: string;
   sources?: Document[];
   keyQuote?: string;
+  evidenceStatus?: 'verified-quote' | 'no-verified-quote';
   createdAt?: Timestamp | Date | FieldValue;
 }
