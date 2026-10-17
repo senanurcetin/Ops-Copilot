@@ -6,15 +6,29 @@
 
 Ops-Copilot is an industrial AI assistant for factory operators who need fast, document-grounded troubleshooting support on the production floor. It now also includes a public industrial data science case study built on the UCI SECOM manufacturing dataset, so the repository demonstrates both product engineering and applied ML reasoning.
 
-![Ops-Copilot interface](https://github.com/user-attachments/assets/63e76a52-267f-4f3e-abd9-5d6bf35e6cf3)
+![NEXUS Ops-Copilot public sign-in screen (real local Chromium, 1440 × 960)](docs/assets/nexus-login-desktop.png)
+
+<sub>Actual local browser capture of the **public sign-in** page, not an authenticated operator session. Dashboard access remains protected by Firebase.</sub>
+
+<details><summary>Mobile public sign-in · 390 × 844</summary>
+
+<img src="docs/assets/nexus-login-mobile.png" alt="NEXUS Ops-Copilot public login on a mobile Chromium viewport" width="390">
+
+</details>
 
 Portfolio case study: [senanur-cetin.vercel.app/projects/ops-copilot](https://senanur-cetin.vercel.app/projects/ops-copilot)
 
 In-app case study route: `/case-study` after running the app locally
 
-Short video demo: [`docs/assets/ops-copilot-case-study.webm`](docs/assets/ops-copilot-case-study.webm)
+Earlier, pre-NEXUS case-study walkthrough (archival): [`docs/assets/ops-copilot-case-study.webm`](docs/assets/ops-copilot-case-study.webm)
 
-![Ops-Copilot case study surface](docs/assets/ops-copilot-case-study.png)
+![NEXUS Ops-Copilot SECOM public case study (real local Chromium, 1440 × 960)](docs/assets/nexus-secom-case-study-desktop.png)
+
+<details><summary>Mobile SECOM case study · 390 × 844</summary>
+
+<img src="docs/assets/nexus-secom-case-study-mobile.png" alt="NEXUS Ops-Copilot SECOM case-study landing section on mobile Chromium" width="390">
+
+</details>
 
 GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 

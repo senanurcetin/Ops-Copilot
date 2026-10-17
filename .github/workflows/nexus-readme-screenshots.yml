@@ -1,0 +1,65 @@
+name: NEXUS README visual capture
+
+# Manually dispatch on a docs/nexus-readme-* branch. Browser captures only
+# change the README after verification; regular CI runs on subsequent commits.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.repository == 'senanurcetin/Ops-Copilot' && startsWith(github.ref, 'refs/heads/docs/nexus-readme-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      FIREBASE_PROJECT_ID: ci-placeholder
+      GEMINI_API_KEY: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-placeholder.firebasestorage.app
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0000000000"
+      NEXT_PUBLIC_FIREBASE_APP_ID: 1:0000000000:web:placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Start isolated local Next.js server
+        run: |
+          npm run build > /tmp/nexus-ops-next.log 2>&1
+          npx next start -p 9002 >> /tmp/nexus-ops-next.log 2>&1 &
+          echo $! > /tmp/nexus-ops-next.pid
+          node -e 'let n=0;const poll=async()=>{try{const r=await fetch("http://127.0.0.1:9002/case-study");if(r.ok)return process.exit(0)}catch{}if(++n>=150)process.exit(1);setTimeout(poll,1000)};poll()'
+      - name: Screenshot public NEXUS login and SECOM case study
+        run: node scripts/capture-readme.mjs
+      - name: Show local Next.js error log on failed capture
+        if: failure()
+        run: tail -n 120 /tmp/nexus-ops-next.log
+      - name: Verify screenshot outputs
+        run: |
+          for f in docs/assets/nexus-login-desktop.png docs/assets/nexus-login-mobile.png docs/assets/nexus-secom-case-study-desktop.png docs/assets/nexus-secom-case-study-mobile.png; do
+            test $(stat -c%s "$f") -gt 12000
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-ops-copilot-readme-screenshots
+          path: docs/assets/nexus-*.png
+          retention-days: 30
+      - name: Commit captured images and updated README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/assets/nexus-login-*.png docs/assets/nexus-secom-case-study-*.png
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: capture NEXUS Ops-Copilot public browser screenshots"
+            git push origin HEAD:"${GITHUB_REF_NAME}"
+          fi

@@ -134,7 +134,28 @@
 .ops-workspace :focus-visible,.ops-login :focus-visible { outline:2px solid #00E0FF;outline-offset:3px; }
 .ops-login { color:#e6f2fc;background:radial-gradient(ellipse at 85% 0%,rgba(110,85,198,.21),transparent 48%),linear-gradient(120deg,#061524,#0B0F19); }
 .ops-login-card { background:#0F243A;color:#e6f2fc; }
-.ops-login-card button { border-color:#416489;color:#e6f2fc; }
+.ops-login-card button { background:#173957;color:#f2f7ff;border-color:#416489; }
+.ops-login-card button:disabled { color:#d0dfee;opacity:.75; }
 .ops-login-card button:hover { background:#173957;color:white; }
 @media(max-width:700px){.ops-topbar {padding-inline:.75rem;gap:.65rem;}.ops-topbar h1{font-size:1rem;line-height:1.2}.ops-healthbar > div > div{gap:.4rem 1rem;}}
 @media(prefers-reduced-motion:reduce){.ops-workspace *, .ops-login * {animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+/* Public SECOM case study follows the same approved Drive/NEXUS 2.0 identity as the authenticated workspace. */
+.ops-case-study {
+  --background: 213 67% 10%;
+  --foreground: 210 55% 95%;
+  --card: 212 58% 15%;
+  --card-foreground: 210 55% 95%;
+  --primary: 188 100% 50%;
+  --primary-foreground: 216 80% 8%;
+  --secondary: 213 46% 22%;
+  --secondary-foreground: 210 55% 95%;
+  --muted: 214 42% 20%;
+  --muted-foreground: 214 26% 73%;
+  --border: 210 34% 28%;
+  --ring: 188 100% 50%;
+  color: #E6F2FC;
+  background: radial-gradient(circle at 90% -10%,rgba(110,85,198,.18),transparent 36%), radial-gradient(circle at 0% 70%,rgba(0,224,255,.07),transparent 35%), #0B0F19;
+}
+.ops-case-study :focus-visible { outline:2px solid #00E0FF; outline-offset:3px; }
+@media(prefers-reduced-motion:reduce){.ops-case-study *, .ops-case-study *::before, .ops-case-study *::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
