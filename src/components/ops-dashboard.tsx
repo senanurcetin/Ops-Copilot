@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection } from '@/firebase';
@@ -27,7 +28,7 @@ import { ChatInterface } from '@/components/chat-interface';
 import { ContextInspector } from '@/components/context-inspector';
 import { SystemHealthBar } from '@/components/system-health-bar';
 import { UserNav } from '@/components/user-nav';
-import { Bot, HomeIcon, Upload, Loader2, RotateCcw, FileJson } from 'lucide-react';
+import { HomeIcon, Upload, Loader2, RotateCcw, FileJson } from 'lucide-react';
 import type { Document as DocumentType, ChatMessage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -102,61 +103,59 @@ export function OpsDashboard() {
   }, [toast]);
 
   const handleResetSession = useCallback(async () => {
-    if (window.confirm('Are you sure you want to reset this diagnostic session? All current progress will be lost.')) {
-      if (!user || !firestore) return;
+    if (!window.confirm('Reset this diagnostic session? All current chat messages will be deleted.')) return;
+    if (!user || !firestore) return;
 
-      toast({
-        title: 'Clearing session...',
-        description: 'Your diagnostic session is being reset.',
+    toast({ title: 'Clearing session...', description: 'Deleting chat messages from your workspace.' });
+    try {
+      const messagesSnapshot = await getDocs(collection(firestore, `users/${user.uid}/messages`));
+      const results = await Promise.allSettled(messagesSnapshot.docs.map((snapshot) => deleteDoc(snapshot.ref)));
+      let failures = 0;
+      results.forEach((result, index) => {
+        if (result.status !== 'rejected') return;
+        failures += 1;
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: messagesSnapshot.docs[index].ref.path,
+          operation: 'delete',
+        }));
       });
-
-      const messagesCollection = collection(firestore, `users/${user.uid}/messages`);
-      const messagesSnapshot = await getDocs(messagesCollection);
-
-      const deletePromises = messagesSnapshot.docs.map((docRef) => {
-        return deleteDoc(docRef.ref).catch(async () => {
-          errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-              path: docRef.ref.path,
-              operation: 'delete',
-            })
-          );
+      if (failures > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Session only partially cleared',
+          description: `${failures} message(s) could not be removed. Recheck your session and permissions.`,
         });
-      });
-
-      await Promise.all(deletePromises);
-
+        return;
+      }
       setSelectedSource(null);
       setSelectedKeyQuote(null);
       setInspectorOpen(false);
-
+      toast({ title: 'Session cleared', description: 'All messages in this diagnostic session were deleted.' });
+    } catch {
       toast({
-        title: 'Session cleared',
-        description: 'Your diagnostic session has been reset.',
+        variant: 'destructive',
+        title: 'Session reset failed',
+        description: 'Could not read or remove the chat history. No successful reset is claimed.',
       });
     }
   }, [user, firestore, toast]);
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
     if (!user || !firestore) return;
-
     const messageRef = doc(firestore, `users/${user.uid}/messages`, messageId);
-
-    deleteDoc(messageRef).catch(async () => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: messageRef.path,
-          operation: 'delete',
-        })
-      );
-    });
-
-    toast({
-      title: 'Message deleted',
-      description: 'The message has been removed from the session.',
-    });
+    try {
+      await deleteDoc(messageRef);
+      toast({ title: 'Message deleted', description: 'The message was removed from the session.' });
+    } catch {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: messageRef.path, operation: 'delete',
+      }));
+      toast({
+        variant: 'destructive',
+        title: 'Message not deleted',
+        description: 'The delete operation failed. Check your permissions and try again.',
+      });
+    }
   }, [user, firestore, toast]);
 
   useEffect(() => {
@@ -175,17 +174,20 @@ export function OpsDashboard() {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="ops-workspace flex min-h-screen bg-slate-50">
+      <div className="ops-workspace flex min-h-screen bg-slate-950">
         <Sidebar
           collapsible="icon"
           className={cn('group-data-[variant=sidebar]:bg-slate-900 text-white border-r border-slate-700')}
         >
           <SidebarHeader>
             <div className="flex items-center gap-3 p-2">
-              <div className="ops-brand-icon bg-indigo-600 p-2 rounded-lg">
-                <Bot className="h-6 w-6 text-white" />
+              <div className="ops-brand-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
+                <Image src="/nexus-x.svg" width={36} height={36} alt="" aria-hidden="true" unoptimized />
               </div>
-              <h1 className="text-xl font-bold group-data-[collapsible=icon]:hidden">Ops-Copilot</h1>
+              <div className="group-data-[collapsible=icon]:hidden min-w-0">
+                <Image src="/nexus-wordmark.svg" width={100} height={30} alt="NEXUS" unoptimized className="h-7 w-auto" />
+                <p className="text-xs font-semibold tracking-wide text-slate-200">Ops-Copilot</p>
+              </div>
             </div>
           </SidebarHeader>
           <SidebarContent className="p-2 pt-0">
@@ -219,7 +221,7 @@ export function OpsDashboard() {
                   variant="secondary"
                   onClick={handleUpload}
                   disabled={isUploading}
-                  className="w-full text-slate-800 justify-start group-data-[collapsible=icon]:justify-center"
+                  className="w-full justify-start text-slate-100 group-data-[collapsible=icon]:justify-center"
                 >
                   <Upload className="mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0" />
                   <span className="group-data-[collapsible=icon]:hidden">
@@ -231,7 +233,7 @@ export function OpsDashboard() {
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset className="ops-shell bg-slate-50 !p-0 !m-0">
+        <SidebarInset className="ops-shell bg-slate-950 !p-0 !m-0">
           <div className="flex flex-col h-screen">
             <header className="ops-topbar sticky top-0 z-10 flex h-[65px] items-center justify-between border-b bg-white px-4">
               <div className="flex items-center gap-4">
@@ -243,7 +245,7 @@ export function OpsDashboard() {
                   variant="ghost"
                   size="icon"
                   onClick={handleResetSession}
-                  className="text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200"
+                  className="border border-slate-600 text-slate-200 hover:border-rose-400 hover:bg-rose-900/30 hover:text-rose-200"
                 >
                   <RotateCcw className="h-5 w-5" />
                   <span className="sr-only">Clear Session</span>
