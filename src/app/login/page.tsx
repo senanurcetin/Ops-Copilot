@@ -31,10 +31,12 @@ export default function LoginPage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        if (loading || !user || isSyncingSession) {
+        if (loading || !user) {
             return;
         }
 
+        // Do not depend on isSyncingSession here: flipping the flag must not
+        // cancel this effect before its own successful redirect can finish.
         let cancelled = false;
 
         const syncSession = async () => {
@@ -78,7 +80,7 @@ export default function LoginPage() {
         return () => {
             cancelled = true;
         };
-    }, [auth, user, loading, isSyncingSession, router, toast]);
+    }, [auth, user, loading, router, toast]);
 
     const handleGoogleSignIn = async () => {
         if (!auth || isSigningIn) return;
