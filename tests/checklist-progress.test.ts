@@ -86,12 +86,12 @@ test('audit evidence is bound to the exact, immutable source content version', (
     documentId: 'manual-1', documentTitle: 'Pump inspection',
     completedSteps: ['Lockout completed'],
   });
-  const original = { title: 'Pump inspection', content: '1. Lockout completed\\n2. Pressure verified' };
+  const original = { title: 'Pump inspection', content: '1. Lockout completed\n2. Pressure verified' };
   const first = assertChecklistMatchesSource(progress, original);
   assert.match(first, /^[0-9a-f]{64}$/);
   assert.equal(first, assertChecklistMatchesSource(progress, original));
   assert.notEqual(first, assertChecklistMatchesSource(progress, {
-    ...original, content: original.content + '\\n3. Record operator name',
+    ...original, content: original.content + '\n3. Record operator name',
   }));
   assert.notEqual(first, assertChecklistMatchesSource(progress, {
     ...original, title: 'Pump inspection'.replace('inspection', 'inspection').concat(' '),
@@ -106,7 +106,7 @@ test('checklist audit stores source fingerprint within the verified transaction'
   const fingerprint = action.indexOf('const sourceSha256 = assertChecklistMatchesSource(');
   const write = action.indexOf('transaction.create(logRef, {');
   assert.ok(fingerprint > start && write > fingerprint);
-  assert.match(action, /sourceSha256,\\s*sourceHashAlgorithm:/);
+  assert.match(action, /sourceSha256,\s*sourceHashAlgorithm:/);
 });
 
 test('free prose cannot be submitted as a completed numbered checklist step', () => {
