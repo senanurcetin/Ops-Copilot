@@ -24,3 +24,20 @@ export function verifiedKeyQuote(
     ? quote
     : undefined;
 }
+
+/**
+ * Return only documents that actually contain a model-proposed quotation.
+ * Retrieval relevance alone does not prove that a document supports an answer.
+ * The quote is a source-navigation aid, not full factual entailment.
+ */
+export function selectVerifiedSources<T extends { title: string; content: string }>(
+  documents: ReadonlyArray<T>,
+  proposed: unknown,
+): { sources: T[]; keyQuote?: string } {
+  const keyQuote = verifiedKeyQuote(documents, proposed);
+  if (!keyQuote) return { sources: [] };
+  return {
+    sources: documents.filter(doc => doc.title.includes(keyQuote) || doc.content.includes(keyQuote)),
+    keyQuote,
+  };
+}
