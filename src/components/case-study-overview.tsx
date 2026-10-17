@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, BrainCircuit, DatabaseZap, Factory, FlaskConical, ShieldCheck } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, XAxis, YAxis } from 'recharts';
 
@@ -94,11 +95,16 @@ const publishedModel = benchmarkComparison.find((item) => item.model_key === 'lo
 
 export function CaseStudyOverview() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#eff6ff,_#f8fafc_48%,_#e2e8f0)] text-slate-950">
+    <div className="ops-case-study min-h-screen bg-[#0B0F19] text-slate-50">
       <div className="mx-auto flex max-w-7xl flex-col gap-12 px-4 py-10 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white/90 shadow-xl shadow-slate-200/80 backdrop-blur">
+        <section className="overflow-hidden rounded-3xl border border-[#294764] bg-[#102238]/95 shadow-xl shadow-[#061524]/80 backdrop-blur">
           <div className="grid gap-8 px-6 py-8 md:grid-cols-[1.4fr_0.9fr] md:px-10 md:py-10">
             <div className="space-y-6">
+              <div className="flex items-center gap-3" aria-label="NEXUS engineering brand">
+                <Image src="/nexus-x.svg" width={52} height={52} alt="" aria-hidden="true" unoptimized className="h-12 w-12 shrink-0 object-contain" />
+                <Image src="/nexus-wordmark.svg" width={172} height={52} alt="NEXUS" unoptimized className="h-12 w-auto max-w-[45vw] object-contain" />
+                <span className="hidden border-l border-cyan-400/30 pl-3 text-xs font-semibold uppercase tracking-[.2em] text-cyan-200 sm:inline">Industrial AI</span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary" className="bg-sky-100 text-sky-800 hover:bg-sky-100">
                   Industrial Data Science Case Study
@@ -107,10 +113,10 @@ export function CaseStudyOverview() {
                 <Badge variant="outline">Chronological Holdout</Badge>
               </div>
               <div className="space-y-4">
-                <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
+                <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-50 md:text-5xl">
                   Ops-Copilot now doubles as an industrial failure-risk prioritization project.
                 </h1>
-                <p className="max-w-2xl text-lg leading-8 text-slate-600">
+                <p className="max-w-2xl text-lg leading-8 text-slate-300">
                   This public page documents the data science layer behind the product: a manufacturing case study that ranks
                   wafer lots for limited engineering review capacity using the UCI SECOM dataset.
                 </p>
@@ -129,7 +135,7 @@ export function CaseStudyOverview() {
                 </Button>
               </div>
             </div>
-            <Card className="border-slate-200 bg-slate-950 text-white">
+            <Card className="border-[#294764] bg-slate-950 text-white">
               <CardHeader>
                 <CardTitle>Why this is portfolio-grade</CardTitle>
                 <CardDescription className="text-slate-300">
@@ -156,12 +162,12 @@ export function CaseStudyOverview() {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {highlightMetrics.map((metric) => (
-            <Card key={metric.label} className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+            <Card key={metric.label} className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
               <CardHeader className="pb-2">
                 <CardDescription>{metric.label}</CardDescription>
                 <CardTitle className="text-3xl">{metric.value}</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-slate-600">{metric.note}</CardContent>
+              <CardContent className="text-sm text-slate-300">{metric.note}</CardContent>
             </Card>
           ))}
         </section>
@@ -170,21 +176,21 @@ export function CaseStudyOverview() {
           {capabilityCards.map((item) => {
             const Icon = item.icon;
             return (
-              <Card key={item.title} className="border-slate-200 bg-white/80 shadow-sm">
+              <Card key={item.title} className="border-[#294764] bg-[#102238]/90 shadow-sm">
                 <CardHeader className="space-y-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white">
                     <Icon className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-xl">{item.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm leading-6 text-slate-600">{item.description}</CardContent>
+                <CardContent className="text-sm leading-6 text-slate-300">{item.description}</CardContent>
               </Card>
             );
           })}
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Risk deciles on the latest production slice</CardTitle>
               <CardDescription>
@@ -216,36 +222,36 @@ export function CaseStudyOverview() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Dataset summary</CardTitle>
               <CardDescription>Public industrial dataset used to build the offline modeling narrative.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-slate-700">
+            <CardContent className="space-y-4 text-sm text-slate-200">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-slate-100 p-4">
-                  <div className="text-xs uppercase tracking-wide text-slate-500">Lots</div>
+                <div className="rounded-2xl bg-[#162C45] p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Lots</div>
                   <div className="mt-1 text-2xl font-semibold">{summary.dataset.total_rows}</div>
                 </div>
-                <div className="rounded-2xl bg-slate-100 p-4">
-                  <div className="text-xs uppercase tracking-wide text-slate-500">Sensor Features</div>
+                <div className="rounded-2xl bg-[#162C45] p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Sensor Features</div>
                   <div className="mt-1 text-2xl font-semibold">{summary.dataset.total_sensor_features}</div>
                 </div>
-                <div className="rounded-2xl bg-slate-100 p-4">
-                  <div className="text-xs uppercase tracking-wide text-slate-500">Failures</div>
+                <div className="rounded-2xl bg-[#162C45] p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Failures</div>
                   <div className="mt-1 text-2xl font-semibold">{summary.dataset.failures}</div>
                 </div>
-                <div className="rounded-2xl bg-slate-100 p-4">
-                  <div className="text-xs uppercase tracking-wide text-slate-500">Kept Features</div>
+                <div className="rounded-2xl bg-[#162C45] p-4">
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Kept Features</div>
                   <div className="mt-1 text-2xl font-semibold">{summary.preprocessing.kept_features}</div>
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 leading-6">
-                <p className="font-medium text-slate-900">Modeling rule</p>
+              <div className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4 leading-6">
+                <p className="font-medium text-slate-50">Modeling rule</p>
                 <p>{summary.preprocessing.missingness_rule}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 leading-6">
-                <p className="font-medium text-slate-900">Operational framing</p>
+              <div className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4 leading-6">
+                <p className="font-medium text-slate-50">Operational framing</p>
                 <p>{summary.portfolio_summary.why_ranking_not_threshold}</p>
               </div>
             </CardContent>
@@ -253,7 +259,7 @@ export function CaseStudyOverview() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Benchmark comparison</CardTitle>
               <CardDescription>
@@ -262,11 +268,11 @@ export function CaseStudyOverview() {
             </CardHeader>
             <CardContent className="space-y-4">
               {benchmarkComparison.map((model) => (
-                <div key={model.model_key} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div key={model.model_key} className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-base font-semibold text-slate-950">{model.short_name}</p>
-                      <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{model.description}</p>
+                      <p className="text-base font-semibold text-slate-50">{model.short_name}</p>
+                      <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">{model.description}</p>
                     </div>
                     {model.model_key === 'logistic_regression' ? (
                       <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Published model</Badge>
@@ -275,20 +281,20 @@ export function CaseStudyOverview() {
                     )}
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                    <div className="rounded-xl bg-white p-3 text-sm">
-                      <div className="text-slate-500">ROC-AUC</div>
+                    <div className="rounded-xl bg-[#112C48] p-3 text-sm">
+                      <div className="text-slate-400">ROC-AUC</div>
                       <div className="mt-1 text-xl font-semibold">{model.roc_auc.toFixed(3)}</div>
                     </div>
-                    <div className="rounded-xl bg-white p-3 text-sm">
-                      <div className="text-slate-500">PR-AUC</div>
+                    <div className="rounded-xl bg-[#112C48] p-3 text-sm">
+                      <div className="text-slate-400">PR-AUC</div>
                       <div className="mt-1 text-xl font-semibold">{model.pr_auc.toFixed(3)}</div>
                     </div>
-                    <div className="rounded-xl bg-white p-3 text-sm">
-                      <div className="text-slate-500">Top 10% Recall</div>
+                    <div className="rounded-xl bg-[#112C48] p-3 text-sm">
+                      <div className="text-slate-400">Top 10% Recall</div>
                       <div className="mt-1 text-xl font-semibold">{(model.top_review_recall * 100).toFixed(1)}%</div>
                     </div>
-                    <div className="rounded-xl bg-white p-3 text-sm">
-                      <div className="text-slate-500">Top 10% Lift</div>
+                    <div className="rounded-xl bg-[#112C48] p-3 text-sm">
+                      <div className="text-slate-400">Top 10% Lift</div>
                       <div className="mt-1 text-xl font-semibold">{model.top_review_lift.toFixed(2)}x</div>
                     </div>
                   </div>
@@ -297,7 +303,7 @@ export function CaseStudyOverview() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-slate-950 text-white shadow-md shadow-slate-300/40">
+          <Card className="border-[#294764] bg-slate-950 text-white shadow-md shadow-[#061524]/40">
             <CardHeader>
               <CardTitle>Why logistic regression stays published</CardTitle>
               <CardDescription className="text-slate-300">
@@ -305,22 +311,22 @@ export function CaseStudyOverview() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm leading-6 text-slate-200">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                 <p>{summary.model.selection_reason}</p>
               </div>
               {publishedModel ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                     <p className="text-xs uppercase tracking-wide text-slate-400">Published PR-AUC</p>
                     <p className="mt-2 text-2xl font-semibold text-white">{publishedModel.pr_auc.toFixed(3)}</p>
                   </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                     <p className="text-xs uppercase tracking-wide text-slate-400">Published Top 10% Lift</p>
                     <p className="mt-2 text-2xl font-semibold text-white">{publishedModel.top_review_lift.toFixed(2)}x</p>
                   </div>
                 </div>
               ) : null}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                 <p className="font-medium text-white">Recruiter takeaway</p>
                 <p className="mt-1">
                   The repo shows model comparison, metric tradeoffs, and an explainable final choice rather than presenting a
@@ -332,7 +338,7 @@ export function CaseStudyOverview() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Top coefficients in the baseline model</CardTitle>
               <CardDescription>
@@ -361,7 +367,7 @@ export function CaseStudyOverview() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Daily risk trend on the evaluation window</CardTitle>
               <CardDescription>
@@ -395,7 +401,7 @@ export function CaseStudyOverview() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Review-budget operating points</CardTitle>
               <CardDescription>
@@ -404,25 +410,25 @@ export function CaseStudyOverview() {
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.review_budgets.map((budget) => (
-                <div key={budget.review_budget_pct} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div key={budget.review_budget_pct} className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-slate-900">Top {budget.review_budget_pct.toFixed(0)}% review queue</p>
-                      <p className="text-sm text-slate-500">{budget.lots_reviewed} lots inspected in the holdout slice</p>
+                      <p className="text-sm font-medium text-slate-50">Top {budget.review_budget_pct.toFixed(0)}% review queue</p>
+                      <p className="text-sm text-slate-400">{budget.lots_reviewed} lots inspected in the holdout slice</p>
                     </div>
                     <Badge variant="outline">{budget.lift_vs_random.toFixed(2)}x lift</Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="text-slate-500">Precision</div>
+                    <div className="rounded-xl bg-[#112C48] p-3">
+                      <div className="text-slate-400">Precision</div>
                       <div className="mt-1 text-xl font-semibold">{(budget.precision * 100).toFixed(1)}%</div>
                     </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="text-slate-500">Recall</div>
+                    <div className="rounded-xl bg-[#112C48] p-3">
+                      <div className="text-slate-400">Recall</div>
                       <div className="mt-1 text-xl font-semibold">{(budget.recall * 100).toFixed(1)}%</div>
                     </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="text-slate-500">Captured Fails</div>
+                    <div className="rounded-xl bg-[#112C48] p-3">
+                      <div className="text-slate-400">Captured Fails</div>
                       <div className="mt-1 text-xl font-semibold">{budget.captured_failures}</div>
                     </div>
                   </div>
@@ -431,7 +437,7 @@ export function CaseStudyOverview() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-slate-950 text-white shadow-md shadow-slate-300/40">
+          <Card className="border-[#294764] bg-slate-950 text-white shadow-md shadow-[#061524]/40">
             <CardHeader>
               <CardTitle>What a recruiter can verify in the repo</CardTitle>
               <CardDescription className="text-slate-300">
@@ -439,19 +445,19 @@ export function CaseStudyOverview() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-slate-200">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                 <p className="font-medium text-white">Python analysis</p>
                 <p className="mt-1">`analysis/run_secom_case_study.py` generates the metrics and chart data that drive this page.</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                 <p className="font-medium text-white">SQL surfaces</p>
                 <p className="mt-1">`sql/` contains review queue, model monitoring, and impact reporting queries for a warehouse setting.</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                 <p className="font-medium text-white">AI product integration</p>
                 <p className="mt-1">The authenticated Ops-Copilot dashboard remains the operator-facing shell for explanations and checklist workflows.</p>
               </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+              <div className="rounded-2xl border border-slate-800 bg-[#102238]/70 p-4">
                 <p className="font-medium text-white">Result framing</p>
                 <p className="mt-1">{summary.portfolio_summary.headline_result}</p>
               </div>
@@ -460,7 +466,7 @@ export function CaseStudyOverview() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>Experiment log</CardTitle>
               <CardDescription>
@@ -469,37 +475,37 @@ export function CaseStudyOverview() {
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.experiment_log.map((entry) => (
-                <div key={entry.step} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-950">{entry.step}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{entry.takeaway}</p>
+                <div key={entry.step} className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4">
+                  <p className="text-sm font-medium text-slate-50">{entry.step}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">{entry.takeaway}</p>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 bg-white/90 shadow-md shadow-slate-200/60">
+          <Card className="border-[#294764] bg-[#102238]/95 shadow-md shadow-[#061524]/60">
             <CardHeader>
               <CardTitle>What this proves in interviews</CardTitle>
               <CardDescription>
                 The project now carries evidence for both data science and production-oriented software discussions.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm leading-6 text-slate-700">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="font-medium text-slate-950">Industrial ML framing</p>
+            <CardContent className="space-y-4 text-sm leading-6 text-slate-200">
+              <div className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4">
+                <p className="font-medium text-slate-50">Industrial ML framing</p>
                 <p className="mt-1">
                   You can turn a noisy manufacturing dataset into a review-queue decision problem with evaluation logic that
                   matches constrained engineering capacity.
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="font-medium text-slate-950">Model governance</p>
+              <div className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4">
+                <p className="font-medium text-slate-50">Model governance</p>
                 <p className="mt-1">
                   You can compare baselines, defend the final model choice, and keep the public claim conservative.
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="font-medium text-slate-950">Product packaging</p>
+              <div className="rounded-2xl border border-[#294764] bg-[#0E2540] p-4">
+                <p className="font-medium text-slate-50">Product packaging</p>
                 <p className="mt-1">
                   You can connect the modeling layer to an operator-facing application with auth, persistence, auditability,
                   and documented quality gates.
