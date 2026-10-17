@@ -22,6 +22,24 @@ test('refuses unsupported text and documents not returned by retrieval', () => {
   assert.equal(verifiedKeyQuote(docs, null), undefined);
 });
 
+test('rejects superficial single-character and two-character supporting quotes', () => {
+  assert.equal(verifiedKeyQuote(docs, 'a'), undefined);
+  assert.equal(verifiedKeyQuote(docs, 'to'), undefined);
+  assert.equal(verifiedKeyQuote([{ title: 'PLC', content: 'PLC manual' }], 'PLC'), 'PLC');
+});
+
+test('rejects invisible, bidirectional and control-character evidence even when present in a source', () => {
+  for (const injected of [
+    'Valve\u202Eshutdown',
+    'Motor\u200Bstatus',
+    'Reset\nindicator',
+    '\u2066PLC-101\u2069',
+  ]) {
+    const hostileDocs = [{ title: 'Reference', content: injected }];
+    assert.equal(verifiedKeyQuote(hostileDocs, injected), undefined);
+  }
+});
+
 test('does not emit oversized quotations or mutate the source', () => {
   const snapshot = structuredClone(docs);
   assert.equal(verifiedKeyQuote(docs, 'x'.repeat(501)), undefined);
