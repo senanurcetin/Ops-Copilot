@@ -69,7 +69,7 @@ The auditor distinguishes workflows by stable GitHub workflow IDs even when seve
 
 **Verified multi-repository example:** [two public GitHub Actions repositories, job timestamps and comparison limits](docs/github-actions-repository-comparison-example.md).
 
-**Review the working GitHub API integration:** [reproducible demo with real public API evidence](docs/github-api-live-demo.md) · [Developer Program application details](docs/github-developer-program-application.md). See the [integration guide, API endpoints, privacy limits and support contact](docs/github-actions-integration.md).
+**Review the working GitHub API integration:** [reproducible demo with real public API evidence](docs/github-api-live-demo.md) · [API integration guide, privacy limits and support contact](docs/github-actions-integration.md).
 
 ## Public interactive GitHub Actions Explorer
 
