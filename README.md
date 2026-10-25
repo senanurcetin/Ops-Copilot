@@ -32,7 +32,7 @@ Earlier, pre-NEXUS case-study walkthrough (archival): [`docs/assets/ops-copilot-
 
 GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 
-Hiring summary: [`docs/hiring-summary.md`](docs/hiring-summary.md)
+Engineering evidence: [`docs/case-study.md`](docs/case-study.md)
 
 ## Why this project exists
 
@@ -178,7 +178,7 @@ npm run case-study:refresh
 - `src/firebase/*` contains client authentication and Firestore wiring.
 - `docs/blueprint.md` captures the product blueprint and implementation intent.
 - `analysis/run_secom_case_study.py` rebuilds the industrial data science artifacts.
-- `docs/case-study.md` and `docs/hiring-summary.md` provide recruiter-facing portfolio summaries.
+- `docs/case-study.md` documents the SECOM research methodology and measured results; the README describes the application and navigation.
 - `src/data/secom-case-study/*` powers the public case-study page.
 - `sql/*` shows review-queue, monitoring, and impact queries for a warehouse implementation.
 
