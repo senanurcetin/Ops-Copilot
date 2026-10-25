@@ -78,7 +78,6 @@ This maps directly to plant staffing reality and turns the model into a queue-pr
 ## Repo surfaces
 
 - `analysis/run_secom_case_study.py`: reproducible pipeline
-- `docs/hiring-summary.md`: short recruiter-facing explanation
 - `src/data/secom-case-study/*`: generated artifacts used by the app
 - `src/app/case-study/page.tsx`: public case-study route
 - `sql/*.sql`: monitoring and business-analysis queries
