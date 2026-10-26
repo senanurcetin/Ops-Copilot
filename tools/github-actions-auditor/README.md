@@ -21,6 +21,10 @@ For private repositories, set a fine-grained `GH_TOKEN` granting only `Actions: 
 
 This is a sampled operational diagnostic and **not** a GitHub Actions billing statement, cost estimate or normalized performance ranking.
 
+## Independent consumer and live REST API example
+
+See [the standalone consumer guide](https://github.com/senanurcetin/Ops-Copilot/blob/main/examples/github-actions-auditor-consumer/README.md) and [its runnable ESM example](https://github.com/senanurcetin/Ops-Copilot/blob/main/examples/github-actions-auditor-consumer/consumer.mjs). The example installs the six-file local npm archive into a **separate Node.js project** and imports both supported package exports to query **live public GitHub Actions data**. Running the example is opt-in; offline/automated tests never depend on an external API or registry. Neither a local package nor successful requests mean that the package has been published or adopted externally.
+
 ## Release preparation
 
 The isolated package test also verifies the exact archive file list using npm's own `pack --dry-run --json` operation; no secrets, unrelated Next.js sources, or undeclared application files may enter the package. The builder refuses arbitrary cleanup destinations.
