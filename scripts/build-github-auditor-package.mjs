@@ -41,6 +41,23 @@ export async function buildPackage({ destination = outputDirectory, repositoryRo
     if (current?.isSymbolicLink()) throw new Error('Refusing to replace a symlinked package directory.');
     await rm(output, { recursive: true, force: true });
   } else {
+    // Custom builds may only stage files under a real temporary directory.
+    // Checking the final output is insufficient: a symlinked ancestor could
+    // redirect even a previously nonexistent destination outside /tmp.
+    let ancestor = temporaryRoot;
+    for (const component of tempRelative.split(sep).slice(0, -1)) {
+      ancestor = join(ancestor, component);
+      const info = await lstat(ancestor).catch(error => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
+      });
+      if (info?.isSymbolicLink()) {
+        throw new Error('Refusing a symlinked custom package destination ancestor.');
+      }
+      if (info && !info.isDirectory()) {
+        throw new Error('Custom package destination ancestor is not a directory.');
+      }
+    }
     const current = await lstat(output).catch(error => {
       if (error.code === 'ENOENT') return null;
       throw error;
