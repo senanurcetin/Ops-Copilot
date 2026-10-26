@@ -1,13 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, rm, symlink, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, stat, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir, homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildPackage } from '../scripts/build-github-auditor-package.mjs';
 
 const repositoryRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
+
+// On Windows, npm is normally a .cmd/.ps1 shim; execFileSync cannot spawn it
+// without a shell. Run npm's JavaScript entrypoint through the active Node
+// executable instead, avoiding shell quoting and arbitrary command execution.
+function execNpm(args, options = {}) {
+  const cliCandidates = [
+    process.env.npm_execpath,
+    join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    join(dirname(dirname(process.execPath)), 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ];
+  const cli = cliCandidates.find(candidate => candidate && existsSync(candidate));
+  if (!cli && process.platform === 'win32') {
+    throw new Error('npm CLI JavaScript entrypoint is required to run this test on Windows.');
+  }
+  return execFileSync(cli ? process.execPath : 'npm',
+    cli ? [cli, ...args] : args,
+    { encoding: 'utf8', timeout: 30000, ...options });
+}
 
 test('standalone package includes only two working CLI bins, documentation and license', async () => {
   const temporary = await mkdtemp(join(tmpdir(), 'ops-actions-package-'));
@@ -40,9 +59,9 @@ test('standalone package includes only two working CLI bins, documentation and l
     assert.match(await readFile(join(destination, 'LICENSE'), 'utf8'), /MIT License/);
     // npm's own packlist is more authoritative than checking staged files:
     // it must not include secrets, Next.js sources or hidden project files.
-    const packed = JSON.parse(execFileSync('npm', [
+    const packed = JSON.parse(execNpm([
       'pack', '--dry-run', '--json', destination,
-    ], { encoding: 'utf8', timeout: 30000, cwd: temporary }));
+    ], { cwd: temporary }));
     assert.equal(packed.length, 1);
     const actualFiles = packed[0].files.map(entry => entry.path).sort();
     assert.deepEqual(actualFiles, [
@@ -122,6 +141,48 @@ test('custom staging also rejects non-directory ancestors in temp', async () => 
       buildPackage({ destination: join(file, 'new-package') }),
       /ancestor is not a directory/,
     );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+
+test('actual npm archive installs without a registry in an independent consumer', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'ops-auditor-consumer-'));
+  const destination = join(temporary, 'package');
+  const consumer = join(temporary, 'consumer');
+  try {
+    await buildPackage({ destination });
+    const packed = JSON.parse(execNpm(
+      ['pack', destination, '--json', '--ignore-scripts', '--pack-destination', temporary],
+      { cwd: temporary },
+    ));
+    assert.equal(packed.length, 1);
+    assert.match(packed[0].filename, /^senanurcetin-github-actions-auditor-0\\.1\\.0\\.tgz$/);
+    assert.deepEqual(packed[0].files.map(item => item.path).sort(), [
+      'CHANGELOG.md', 'LICENSE', 'README.md',
+      'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs', 'package.json',
+    ]);
+    await mkdir(consumer);
+    await writeFile(join(consumer, 'package.json'),
+      JSON.stringify({ name: 'offline-consumer', version: '0.0.0', private: true }));
+    // A tarball path + --offline + --ignore-scripts guarantees that this
+    // consumer exercise does not publish or fetch registry dependencies.
+    execNpm([
+      'install', join(temporary, packed[0].filename),
+      '--offline', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false',
+    ], { cwd: consumer, timeout: 90000 });
+    const installed = join(consumer, 'node_modules', '@senanurcetin', 'github-actions-auditor');
+    const manifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
+    assert.equal(manifest.name, '@senanurcetin/github-actions-auditor');
+    assert.equal(manifest.version, '0.1.0');
+    assert.equal(Object.keys(manifest.dependencies || {}).length, 0);
+    for (const command of ['github-actions-audit', 'github-actions-compare']) {
+      const help = execFileSync(process.execPath,
+        [join(installed, 'bin', command + '.mjs'), '--help'],
+        { encoding: 'utf8', timeout: 15000, cwd: consumer });
+      assert.match(help, /Usage:/);
+    }
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
