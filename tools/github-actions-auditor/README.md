@@ -23,7 +23,7 @@ This is a sampled operational diagnostic and **not** a GitHub Actions billing st
 
 ## Independent consumer and live REST API example
 
-See [the standalone consumer guide](../../examples/github-actions-auditor-consumer/README.md) and [its runnable ESM example](../../examples/github-actions-auditor-consumer/consumer.mjs). The example installs the six-file local npm archive into a **separate Node.js project** and imports both supported package exports to query **live public GitHub Actions data**. Running the example is opt-in; offline/automated tests never depend on an external API or registry. Neither a local package nor successful requests mean that the package has been published or adopted externally.
+See [the standalone consumer guide](https://github.com/senanurcetin/Ops-Copilot/blob/main/examples/github-actions-auditor-consumer/README.md) and [its runnable ESM example](https://github.com/senanurcetin/Ops-Copilot/blob/main/examples/github-actions-auditor-consumer/consumer.mjs). The example installs the six-file local npm archive into a **separate Node.js project** and imports both supported package exports to query **live public GitHub Actions data**. Running the example is opt-in; offline/automated tests never depend on an external API or registry. Neither a local package nor successful requests mean that the package has been published or adopted externally.
 
 ## Release preparation
 
