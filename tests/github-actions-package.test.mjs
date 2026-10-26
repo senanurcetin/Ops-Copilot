@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir, homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -183,6 +183,19 @@ test('actual npm archive installs without a registry in an independent consumer'
         { encoding: 'utf8', timeout: 15000, cwd: consumer });
       assert.match(help, /Usage:/);
     }
+    // Also verify the public ESM exports from an actually installed npm
+    // archive, without any network call: invalid args short-circuit before
+    // auditRepository or compareRepositories are called.
+    const exampleSource = join(repositoryRoot, 'examples',
+      'github-actions-auditor-consumer', 'consumer.mjs');
+    const example = join(consumer, 'consumer.mjs');
+    await writeFile(example, await readFile(exampleSource, 'utf8'));
+    const duplicate = spawnSync(process.execPath, [
+      example, 'senanurcetin/Ops-Copilot', 'senanurcetin/Ops-Copilot',
+    ], { cwd: consumer, encoding: 'utf8', timeout: 15000 });
+    assert.equal(duplicate.status, 2);
+    assert.match(duplicate.stderr, /Usage: node consumer\\.mjs/);
+    assert.equal(duplicate.stdout, '');
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
