@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, symlink, stat } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir, homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -78,6 +78,50 @@ test('a custom temporary destination is never silently erased on a second build'
   try {
     await buildPackage({ destination });
     await assert.rejects(buildPackage({ destination }), /must not already exist/);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test('custom staging rejects a symlinked temporary parent before creating files', async t => {
+  const temporary = await mkdtemp(join(tmpdir(), 'ops-auditor-symlink-'));
+  const outside = await mkdtemp(join(tmpdir(), 'ops-auditor-outside-'));
+  const link = join(temporary, 'redirect');
+  try {
+    try {
+      await symlink(outside, link, process.platform === 'win32' ? 'junction' : 'dir');
+    } catch (error) {
+      if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) {
+        t.skip('Symlink creation is restricted by this runtime.');
+        return;
+      }
+      throw error;
+    }
+    await assert.rejects(
+      buildPackage({ destination: join(link, 'new-package') }),
+      /symlinked custom package destination ancestor/,
+    );
+    await assert.rejects(
+      stat(join(outside, 'new-package')),
+      { code: 'ENOENT' },
+      'A rejected staging destination must not write through the link.',
+    );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test('custom staging also rejects non-directory ancestors in temp', async () => {
+  const temporary = await mkdtemp(join(tmpdir(), 'ops-auditor-invalid-parent-'));
+  try {
+    const file = join(temporary, 'not-a-directory');
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(file, 'not a directory');
+    await assert.rejects(
+      buildPackage({ destination: join(file, 'new-package') }),
+      /ancestor is not a directory/,
+    );
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
