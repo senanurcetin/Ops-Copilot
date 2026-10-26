@@ -194,7 +194,7 @@ test('actual npm archive installs without a registry in an independent consumer'
       example, 'senanurcetin/Ops-Copilot', 'senanurcetin/Ops-Copilot',
     ], { cwd: consumer, encoding: 'utf8', timeout: 15000 });
     assert.equal(duplicate.status, 2);
-    assert.match(duplicate.stderr, /Usage: node consumer\\.mjs/);
+    assert.match(duplicate.stderr, /Usage: node consumer[.]mjs/);
     assert.equal(duplicate.stdout, '');
   } finally {
     await rm(temporary, { recursive: true, force: true });
