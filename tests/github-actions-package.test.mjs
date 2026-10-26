@@ -158,7 +158,7 @@ test('actual npm archive installs without a registry in an independent consumer'
       { cwd: temporary },
     ));
     assert.equal(packed.length, 1);
-    assert.match(packed[0].filename, /^senanurcetin-github-actions-auditor-0\\.1\\.0\\.tgz$/);
+    assert.equal(packed[0].filename, 'senanurcetin-github-actions-auditor-0.1.0.tgz');
     assert.deepEqual(packed[0].files.map(item => item.path).sort(), [
       'CHANGELOG.md', 'LICENSE', 'README.md',
       'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs', 'package.json',
