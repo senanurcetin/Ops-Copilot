@@ -16,7 +16,7 @@ acceptance claim, or assertion of eligibility. Anthropic alone decides eligibili
 | Requirement | Evidence at check | Assessment |
 | --- | --- | --- |
 | Individual applicant, age and supported region | Not verifiable from repository | OWNER MUST CONFIRM |
-| GitHub account at least two years old | GitHub user `created_at` not verified | BLOCKER UNTIL VERIFIED |
+| GitHub account at least two years old | GitHub public Users API `created_at`: **2026-01-07T22:01:29Z** (checked 2026-10-30) | **NOT ELIGIBLE AS OF 2026-10-30** |
 | Public OSS contribution in past 90 days | Public repository pushed 2026-10-26 (GitHub metadata); verify author activity separately | NEEDS AUTHOR VERIFICATION |
 | OSI-approved license | Root MIT `LICENSE` and GitHub SPDX MIT | OBSERVED |
 | 500 dependent repos or 100 dependent packages | No independently verified figures | NOT DEMONSTRATED |
@@ -48,10 +48,11 @@ installing the application, but technical availability **does not establish adop
 
 ## Highest-value next steps
 
-1. Verify the GitHub account's exact creation timestamp via the public
-   GitHub Users API (`GET https://api.github.com/users/senanurcetin`,
-   `created_at`). If it is less than two years before the application date,
-   **the formal general eligibility requirement is not satisfied**.
+1. The GitHub account was **created 2026-01-07T22:01:29Z** according to
+   the public GitHub Users API (`GET https://api.github.com/users/senanurcetin`,
+   `created_at`), checked 2026-10-30. The two-year condition cannot be met
+   before **2028-01-07** (UTC) under the terms currently in force. Do not apply
+   claiming present eligibility. Recheck the terms before a future application.
 2. Verify original, recent public OSS contributions and merged upstream PRs,
    excluding self-owned repos from the 100-external-PR criterion.
 3. Keep the CLI genuinely useful to independent consumers: repeatable package
