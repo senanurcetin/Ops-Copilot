@@ -11,6 +11,7 @@ From the repository root:
 ```bash
 npm run auditor:package
 node dist/github-actions-auditor/bin/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 5 --markdown
+node dist/github-actions-auditor/bin/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 5 --csv > actions-sample.csv
 node dist/github-actions-auditor/bin/github-actions-compare.mjs senanurcetin/Ops-Copilot senanurcetin/ot-sentinel --limit 5 --json
 npm run auditor:pack:dry-run
 ```
@@ -19,7 +20,7 @@ After installing a release of the package, two executable commands are available
 
 For private repositories, set a fine-grained `GH_TOKEN` granting only `Actions: read` for the selected repositories. Do not disclose tokens in issue reports or terminal recordings. The client performs GET requests only.
 
-This is a sampled operational diagnostic and **not** a GitHub Actions billing statement, cost estimate or normalized performance ranking.
+This is a sampled operational diagnostic and **not** a GitHub Actions billing statement, cost estimate or normalized performance ranking. CSV exports contain an explicit `summary` row and separate `workflow` rows; filter `record_type` before totaling metrics. CSV workflow names are sanitized against spreadsheet formula injection.
 
 ## Independent consumer and live REST API example
 
