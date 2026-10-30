@@ -92,6 +92,37 @@ function escapeMarkdown(value) {
     .replace(/\r?\n/g, ' ').replaceAll('\r', ' ');
 }
 
+/** Quote CSV cells and prevent spreadsheet formula execution from API-controlled labels. */
+export function csvCell(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value !== 'string') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw new Error('CSV values must be finite numbers or strings.');
+    }
+    return String(value);
+  }
+  const plain = value.replace(/[\r\n]+/g, ' ');
+  const safe = /^\s*[=+\-@]/.test(plain) ? "'" + plain : plain;
+  return '"' + safe.replaceAll('"', '""') + '"';
+}
+
+/** Stable, machine-readable workflow rows including sample scope and caveats. */
+export function renderCsvReport(report) {
+  const header = [
+    'repository', 'workflow_id', 'workflow_name', 'runs', 'failures', 'scheduled',
+    'completed_jobs', 'elapsed_job_minutes', 'inspected_runs', 'total_matching_runs',
+    'sample_warning', 'since', 'until', 'branch', 'event', 'status', 'metric_note',
+  ];
+  // Keep a metadata row even if no workflows matched the selected filter.
+  const workflows = report.workflows.length ? report.workflows : [null];
+  const rows = workflows.map(w => [
+    report.repository, w?.workflow_id, w?.name, w?.runs, w?.failures, w?.scheduled,
+    w?.job_count, w?.elapsed_job_minutes, report.inspected_runs,
+    report.total_matching_runs, report.sample_warning, report.since, report.until,
+    report.branch, report.event, report.status, report.metric_note,
+  ]);
+  return [header.join(','), ...rows.map(row => row.map(csvCell).join(','))].join('\n') + '\n';
+}
 export function renderMarkdownReport(report) {
   const rows = [
     '# GitHub Actions report: ' + escapeMarkdown(report.repository),
@@ -391,7 +422,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown | --csv]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -404,6 +435,7 @@ export function parseArgs(args) {
   let limit = 30;
   let json = false;
   let markdown = false;
+  let csv = false;
   let since;
   let until;
   let branch;
@@ -413,6 +445,7 @@ export function parseArgs(args) {
     const arg = args[i];
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
+    else if (arg === '--csv') csv = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
     else if (arg === '--until') {
       if (!args[i + 1] || args[i + 1].startsWith('-')) {
@@ -432,9 +465,9 @@ export function parseArgs(args) {
   if (!repository) throw new Error('Missing owner/repo.');
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
-  if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
+  if ([json, markdown, csv].filter(Boolean).length > 1) throw new Error('Choose either --json, --markdown or --csv (only one output format).');
   validateDateRange({ since, until });
-  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}) };
+  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}), ...(csv ? { csv } : {}) };
 }
 
 async function main() {
@@ -453,6 +486,7 @@ async function main() {
     });
     if (options.json) return console.log(JSON.stringify(data, null, 2));
     if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
+    if (options.csv) return process.stdout.write(renderCsvReport(data));
     console.log(`# GitHub Actions audit: ${data.repository}`);
     console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     if (data.total_matching_runs !== undefined) console.log(`Runs matching GitHub API query: ${data.total_matching_runs}`);
