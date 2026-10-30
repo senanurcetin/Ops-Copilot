@@ -773,3 +773,27 @@ test('unparseable Retry-After does not bypass GitHub server throttling', async (
   }), error => /HTTP 429/.test(error.message) && !error.message.includes('private-token'));
   assert.equal(requests, 1);
 });
+
+test('per-workflow completed and incomplete job counts reconcile to report totals', () => {
+  const runs = [
+    { id: 51, workflow_id: 101, name: 'Build', event: 'push', conclusion: 'success' },
+    { id: 52, workflow_id: 202, name: 'Tests', event: 'pull_request', conclusion: 'success' },
+    { id: 53, workflow_id: 101, name: 'Renamed Build', event: 'push', conclusion: 'failure' },
+  ];
+  const jobs = new Map([
+    [51, [job('2026-10-12T10:00:00Z', '2026-10-12T10:02:00Z'), job(null, null)]],
+    [52, [job('2026-10-12T11:00:00Z', '2026-10-12T11:00:00Z')]],
+    [53, [job('bad', '2026-10-12T12:00:00Z'), job('2026-10-12T12:00:00Z', '2026-10-12T12:03:00Z')]],
+  ]);
+  const report = summarizeRuns('owner/repo', runs, jobs);
+  const build = report.workflows.find(w => w.workflow_id === 101);
+  const tests = report.workflows.find(w => w.workflow_id === 202);
+  assert.equal(build.job_count, 2);
+  assert.equal(build.incomplete_jobs, 2);
+  assert.equal(tests.job_count, 1);
+  assert.equal(tests.incomplete_jobs, 0);
+  assert.equal(report.completed_jobs, 3);
+  assert.equal(report.incomplete_jobs, 2);
+  assert.equal(report.workflows.reduce((sum, w) => sum + w.job_count, 0), report.completed_jobs);
+  assert.equal(report.workflows.reduce((sum, w) => sum + w.incomplete_jobs, 0), report.incomplete_jobs);
+});
