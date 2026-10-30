@@ -465,7 +465,7 @@ export function parseArgs(args) {
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
   if (Number(json) + Number(markdown) + Number(csv) > 1) {
-    throw new Error('Choose only one output format: --json, --markdown, or --csv.');
+    throw new Error('Choose either --json, --markdown, or --csv; only one output format is allowed.');
   }
   validateDateRange({ since, until });
   return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}), ...(csv ? { csv } : {}) };
