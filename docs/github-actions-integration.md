@@ -43,6 +43,27 @@ node scripts/github-actions-audit.mjs OWNER/PRIVATE_REPO --limit 20
 
 The script is platform-agnostic except for the shell-specific `export` example; on PowerShell use `$env:GH_TOKEN = "..." ` instead.
 
+## CSV reports
+
+To transfer read-only sampled diagnostics into spreadsheets or downstream reports:
+
+```bash
+node scripts/github-actions-audit.mjs owner/repo --limit 10 --csv > actions.csv
+node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --csv > comparison.csv
+node --test tests/github-actions-csv.test.mjs
+```
+
+The CSV format is deliberately flat; it retains source repository, scope, sampled
+observations and sampling limitations. The single-repository export **always**
+contains one `record_type=summary` row (including complete/incomplete job counts)
+and zero or more `record_type=workflow` rows with stable workflow IDs. Filter
+`record_type` before aggregating: adding summary and workflow elapsed time would
+double-count the sample. Text received from GitHub is
+CSV-quoted and formula-like leading characters are escaped with an apostrophe
+for safer spreadsheet import. This precaution does not replace downstream
+sanitization. Use one output flag only (`--json`, `--markdown` or `--csv`).
+Elapsed job-minutes are sampled and must never be presented as billable minutes.
+
 ## Comparing repositories (without triggering Actions)
 
 [**Dated real-world API comparison with linked source runs and job timestamps**](github-actions-repository-comparison-example.md).
