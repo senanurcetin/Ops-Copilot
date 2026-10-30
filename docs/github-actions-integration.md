@@ -56,8 +56,10 @@ node --test tests/github-actions-csv.test.mjs
 The CSV format is deliberately flat; it retains source repository, scope, sampled
 observations and sampling limitations. The single-repository export **always**
 contains one `record_type=summary` row (including complete/incomplete job counts)
-and zero or more `record_type=workflow` rows with stable workflow IDs. Filter
-`record_type` before aggregating: adding summary and workflow elapsed time would
+and zero or more `record_type=workflow` rows with stable workflow IDs and
+per-workflow completed/incomplete job counts. Within one sample, those counts
+reconcile to the single summary row; workflows with zero completed jobs still
+retain incomplete job counts. Filter `record_type` before aggregating: adding summary and workflow elapsed time would
 double-count the sample. Text received from GitHub is
 CSV-quoted and formula-like leading characters are escaped with an apostrophe
 for safer spreadsheet import. This precaution does not replace downstream
