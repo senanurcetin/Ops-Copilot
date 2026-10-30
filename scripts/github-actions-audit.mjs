@@ -106,22 +106,32 @@ export function csvCell(value) {
   return '"' + safe.replaceAll('"', '""') + '"';
 }
 
-/** Stable, machine-readable workflow rows including sample scope and caveats. */
+/** Separate summary and workflow grains so totals are never silently lost. */
 export function renderCsvReport(report) {
   const header = [
-    'repository', 'workflow_id', 'workflow_name', 'runs', 'failures', 'scheduled',
-    'completed_jobs', 'elapsed_job_minutes', 'inspected_runs', 'total_matching_runs',
-    'sample_warning', 'since', 'until', 'branch', 'event', 'status', 'metric_note',
+    'record_type', 'repository', 'workflow_id', 'workflow_name', 'runs',
+    'failures', 'scheduled', 'completed_jobs', 'incomplete_jobs',
+    'elapsed_job_minutes', 'inspected_runs', 'total_matching_runs',
+    'sample_warning', 'since', 'until', 'branch', 'event', 'status',
+    'metric_note',
   ];
-  // Keep a metadata row even if no workflows matched the selected filter.
-  const workflows = report.workflows.length ? report.workflows : [null];
-  const rows = workflows.map(w => [
-    report.repository, w?.workflow_id, w?.name, w?.runs, w?.failures, w?.scheduled,
-    w?.job_count, w?.elapsed_job_minutes, report.inspected_runs,
-    report.total_matching_runs, report.sample_warning, report.since, report.until,
-    report.branch, report.event, report.status, report.metric_note,
+  // The summary row preserves the sampled totals even when there are no runs.
+  // Consumers must filter record_type before aggregating these distinct grains.
+  const summary = [
+    'summary', report.repository, null, null, null, null, null,
+    report.completed_jobs, report.incomplete_jobs, report.elapsed_job_minutes,
+    report.inspected_runs, report.total_matching_runs, report.sample_warning,
+    report.since, report.until, report.branch, report.event, report.status,
+    report.metric_note,
+  ];
+  const rows = report.workflows.map(w => [
+    'workflow', report.repository, w.workflow_id, w.name, w.runs, w.failures,
+    w.scheduled, w.job_count, null, w.elapsed_job_minutes,
+    null, null, null, report.since, report.until, report.branch, report.event,
+    report.status, report.metric_note,
   ]);
-  return [header.join(','), ...rows.map(row => row.map(csvCell).join(','))].join('\n') + '\n';
+  return [header.join(','), ...[summary, ...rows].map(row =>
+    row.map(csvCell).join(','))].join('\n') + '\n';
 }
 export function renderMarkdownReport(report) {
   const rows = [
