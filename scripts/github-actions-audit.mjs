@@ -124,6 +124,36 @@ export function renderMarkdownReport(report) {
   return rows.join('\n') + '\n';
 }
 
+
+/** CSV with explicit summary/workflow grain; never present sampled time as billed time. */
+function csvCell(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  const raw = String(value);
+  // Spreadsheet apps may evaluate leading formula characters even in quoted CSV.
+  const safe = /^[\s\uFEFF]*[=+\-@]/u.test(raw) ? "'" + raw : raw;
+  return '"' + safe.replaceAll('"', '""') + '"';
+}
+
+export function renderCsvReport(report) {
+  const rows = [[
+    'record_type', 'repository', 'workflow_id', 'workflow_name',
+    'runs', 'failures', 'scheduled', 'completed_jobs', 'incomplete_jobs',
+    'elapsed_job_minutes', 'inspected_runs', 'total_matching_runs',
+    'sample_warning', 'metric_note',
+  ], [
+    'summary', report.repository, null, null, null, null, null,
+    report.completed_jobs, report.incomplete_jobs, report.elapsed_job_minutes,
+    report.inspected_runs, report.total_matching_runs,
+    report.sample_warning, report.metric_note,
+  ], ...report.workflows.map(workflow => [
+    'workflow', report.repository, workflow.workflow_id, workflow.name,
+    workflow.runs, workflow.failures, workflow.scheduled, workflow.job_count,
+    null, workflow.elapsed_job_minutes, null, null, null, report.metric_note,
+  ])];
+  return rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
+}
+
 // A zero-minute job is valid. Missing or invalid timestamps are *not*.
 function completedJobMinutes(job) {
   if (typeof job?.started_at !== 'string' || typeof job?.completed_at !== 'string') return null;
@@ -391,7 +421,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown | --csv]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -404,6 +434,7 @@ export function parseArgs(args) {
   let limit = 30;
   let json = false;
   let markdown = false;
+  let csv = false;
   let since;
   let until;
   let branch;
@@ -413,6 +444,7 @@ export function parseArgs(args) {
     const arg = args[i];
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
+    else if (arg === '--csv') csv = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
     else if (arg === '--until') {
       if (!args[i + 1] || args[i + 1].startsWith('-')) {
@@ -432,9 +464,11 @@ export function parseArgs(args) {
   if (!repository) throw new Error('Missing owner/repo.');
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
-  if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
+  if (Number(json) + Number(markdown) + Number(csv) > 1) {
+    throw new Error('Choose only one output format: --json, --markdown, or --csv.');
+  }
   validateDateRange({ since, until });
-  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}) };
+  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}), ...(csv ? { csv } : {}) };
 }
 
 async function main() {
@@ -453,6 +487,7 @@ async function main() {
     });
     if (options.json) return console.log(JSON.stringify(data, null, 2));
     if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
+    if (options.csv) return process.stdout.write(renderCsvReport(data));
     console.log(`# GitHub Actions audit: ${data.repository}`);
     console.log(`Runs sampled: ${data.inspected_runs} | Completed jobs: ${data.completed_jobs} | Jobs with incomplete/invalid timings: ${data.incomplete_jobs} | Elapsed job-minutes: ${data.elapsed_job_minutes}`);
     if (data.total_matching_runs !== undefined) console.log(`Runs matching GitHub API query: ${data.total_matching_runs}`);
