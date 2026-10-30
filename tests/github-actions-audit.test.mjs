@@ -6,6 +6,7 @@ import {
   jobDurationMinutes,
   parseArgs,
   renderMarkdownReport,
+  renderCsvReport,
   summarizeRuns,
   validateBranch,
   validateSinceDate,
@@ -772,4 +773,50 @@ test('unparseable Retry-After does not bypass GitHub server throttling', async (
     repository: 'a/b', token: 'private-token', fetchImpl,
   }), error => /HTTP 429/.test(error.message) && !error.message.includes('private-token'));
   assert.equal(requests, 1);
+});
+
+
+test('CLI provides a mutually exclusive CSV output format', () => {
+  assert.deepEqual(parseArgs(['a/b', '--csv']), {
+    repository: 'a/b', limit: 30, json: false, csv: true,
+  });
+  assert.throws(() => parseArgs(['a/b', '--csv', '--json']), /only one output format/);
+  assert.throws(() => parseArgs(['a/b', '--markdown', '--csv']), /only one output format/);
+});
+
+test('CSV export preserves sample limits and neutralizes spreadsheet formulas', () => {
+  const runs = [
+    { id: 1, workflow_id: 7, name: '=HYPERLINK("https://example.com","click")',
+      event: 'schedule', conclusion: 'failure' },
+    { id: 2, workflow_id: 8, name: 'Build, "unit tests"',
+      event: 'push', conclusion: 'success' },
+  ];
+  const jobs = new Map([
+    [1, [job('2026-10-12T10:00:00Z', '2026-10-12T10:02:00Z')]],
+    [2, [job(null, null)]],
+  ]);
+  const report = {
+    ...summarizeRuns('a/b', runs, jobs),
+    total_matching_runs: 25,
+    sample_warning: 'Only 2 of 25 runs sampled.',
+  };
+  const csv = renderCsvReport(report);
+  const lines = csv.trimEnd().split('\n');
+  assert.equal(lines.length, 4); // header + summary + 2 workflows
+  assert.match(lines[0], /^"record_type","repository","workflow_id"/);
+  assert.match(lines[1], /^"summary","a\/b",/);
+  assert.match(lines[1], /,1,1,2,2,25,/);
+  assert.match(csv, /"'=HYPERLINK/);
+  assert.ok(csv.includes('"Build, ""unit tests"""'));
+  assert.match(csv, /Only 2 of 25 runs sampled/);
+  assert.match(csv, /not GitHub billable minutes/);
+});
+
+test('CSV export keeps a summary even for zero workflow runs', () => {
+  const report = { ...summarizeRuns('a/b', [], new Map()),
+    total_matching_runs: 0, sample_warning: null };
+  const lines = renderCsvReport(report).trimEnd().split('\n');
+  assert.equal(lines.length, 2);
+  assert.match(lines[1], /^"summary","a\/b",/);
+  assert.match(lines[1], /,0,0,0,0,0,/);
 });
