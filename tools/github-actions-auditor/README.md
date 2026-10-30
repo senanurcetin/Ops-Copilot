@@ -30,7 +30,9 @@ workflow IDs where GitHub supplies them, the sampled run count, API match count 
 known), selected filters, incomplete coverage warnings and a metric caveat. A filter
 that finds zero runs still produces a summary row. The single-repository export
 always includes a `record_type=summary` row for complete/incomplete job totals
-and `record_type=workflow` rows for individual workflows; filter by this field
+and `record_type=workflow` rows for individual workflows, including their
+completed and incomplete job counts; the per-workflow counts sum to the
+summary totals for the sampled runs. Filter by this field
 before summing elapsed time to avoid double-counting. Comparison rows carry each
 repository's coverage information and the non-ranking warning.
 

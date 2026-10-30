@@ -126,7 +126,7 @@ export function renderCsvReport(report) {
   ];
   const rows = report.workflows.map(w => [
     'workflow', report.repository, w.workflow_id, w.name, w.runs, w.failures,
-    w.scheduled, w.job_count, null, w.elapsed_job_minutes,
+    w.scheduled, w.job_count, w.incomplete_jobs, w.elapsed_job_minutes,
     null, null, null, report.since, report.until, report.branch, report.event,
     report.status, report.metric_note,
   ]);
@@ -193,7 +193,7 @@ export function summarizeRuns(repository, runs, jobsByRun) {
     if (!workflows.has(groupKey)) {
       workflows.set(groupKey, {
         name, workflow_id: workflowId, runs: 0, failures: 0, cancelled: 0, scheduled: 0,
-        job_count: 0, elapsed_job_minutes: 0,
+        job_count: 0, incomplete_jobs: 0, elapsed_job_minutes: 0,
       });
     }
     const item = workflows.get(groupKey);
@@ -205,6 +205,7 @@ export function summarizeRuns(repository, runs, jobsByRun) {
       const duration = completedJobMinutes(job);
       if (duration === null) {
         incompleteJobs++;
+        item.incomplete_jobs++;
         continue;
       }
       item.elapsed_job_minutes += duration;
