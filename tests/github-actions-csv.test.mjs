@@ -49,7 +49,7 @@ test('single-repository CSV separates complete summary totals from workflow rows
     workflows: [{
       workflow_id: 123, name: '=HYPERLINK("https://example.invalid")',
       runs: 1, failures: 1, scheduled: 0,
-      job_count: 2, elapsed_job_minutes: 3.5,
+      job_count: 2, incomplete_jobs: 1, elapsed_job_minutes: 3.5,
     }],
   });
   const lines = csv.trimEnd().split('\n');
