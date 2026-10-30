@@ -15,6 +15,27 @@ node dist/github-actions-auditor/bin/github-actions-compare.mjs senanurcetin/Ops
 npm run auditor:pack:dry-run
 ```
 
+## CSV export for spreadsheet and downstream tooling
+
+Both commands support `--csv` in addition to plain text, JSON and Markdown. CSV includes
+stable column headers and explicit sample scope; it is **not** a billing report.
+
+```bash
+node scripts/github-actions-audit.mjs owner/repo --limit 10 --csv > actions.csv
+node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --csv > comparison.csv
+```
+
+The standalone package exports the same two commands. Workflow rows contain stable numeric
+workflow IDs where GitHub supplies them, the sampled run count, API match count (when
+known), selected filters, incomplete coverage warnings and a metric caveat. A filter
+that finds zero runs still produces a metadata row. Comparison rows carry each
+repository's coverage information and the non-ranking warning.
+
+Workflow names and other GitHub-controlled text are CSV-quoted, line breaks are flattened,
+and formula-like cells are prefixed with an apostrophe to reduce spreadsheet formula
+injection risk. Treat exported files as **untrusted external data** when importing into
+other tools. `--csv`, `--json` and `--markdown` are mutually exclusive.
+
 After installing a release of the package, two executable commands are available: `github-actions-audit` and `github-actions-compare`. At this stage, packaging does not imply that a release has been uploaded to a package registry.
 
 For private repositories, set a fine-grained `GH_TOKEN` granting only `Actions: read` for the selected repositories. Do not disclose tokens in issue reports or terminal recordings. The client performs GET requests only.
