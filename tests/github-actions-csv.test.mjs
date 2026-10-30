@@ -59,7 +59,7 @@ test('single-repository CSV separates complete summary totals from workflow rows
   assert.ok(lines[1].includes('"Only 1 of 42 runs, sampled"'));
   assert.ok(lines[2].startsWith('"workflow","owner/repo",123,'));
   assert.ok(lines[2].includes('"\'=HYPERLINK(""https://example.invalid"")"'));
-  assert.ok(lines[2].includes(',1,1,0,2,,3.5,,,,')); // no summary totals on workflow row
+  assert.ok(lines[2].includes(',1,1,0,2,1,3.5,,,,')); // per-workflow incomplete count; no summary totals
   assert.ok(lines[2].includes('"Sampled time, not billing"'));
 });
 
