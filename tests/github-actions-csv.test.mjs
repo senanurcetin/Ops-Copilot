@@ -39,9 +39,10 @@ test('comparison CSV format is exclusive with JSON and Markdown', () => {
   assert.throws(() => parseComparisonArgs(['owner/one', 'owner/two', '--json', '--csv']), /only one output format/);
 });
 
-test('single-repository CSV preserves stable workflow IDs and sampling caveats', () => {
+test('single-repository CSV separates complete summary totals from workflow rows', () => {
   const csv = renderCsvReport({
     repository: 'owner/repo', inspected_runs: 1, total_matching_runs: 42,
+    completed_jobs: 2, incomplete_jobs: 1, elapsed_job_minutes: 3.5,
     sample_warning: 'Only 1 of 42 runs, sampled', since: '2026-10-01',
     until: '2026-10-30', status: 'failure',
     metric_note: 'Sampled time, not billing',
@@ -52,22 +53,25 @@ test('single-repository CSV preserves stable workflow IDs and sampling caveats',
     }],
   });
   const lines = csv.trimEnd().split('\n');
-  assert.equal(lines.length, 2);
-  assert.match(lines[0], /^repository,workflow_id,workflow_name,runs/);
-  assert.ok(lines[1].includes(',"\'=HYPERLINK(""https://example.invalid"")",'));
+  assert.equal(lines.length, 3);
+  assert.match(lines[0], /^record_type,repository,workflow_id,workflow_name,runs/);
+  assert.ok(lines[1].startsWith('"summary","owner/repo",,,,,,2,1,3.5,1,42,'));
   assert.ok(lines[1].includes('"Only 1 of 42 runs, sampled"'));
-  assert.ok(lines[1].includes('"Sampled time, not billing"'));
-  assert.ok(lines[1].includes(',123,'));
+  assert.ok(lines[2].startsWith('"workflow","owner/repo",123,'));
+  assert.ok(lines[2].includes('"\'=HYPERLINK(""https://example.invalid"")"'));
+  assert.ok(lines[2].includes(',1,1,0,2,,3.5,,,,')); // no summary totals on workflow row
+  assert.ok(lines[2].includes('"Sampled time, not billing"'));
 });
 
-test('single-repository CSV includes explicit metadata when zero runs match', () => {
+test('single-repository CSV keeps a summary when zero runs match', () => {
   const csv = renderCsvReport({
     repository: 'owner/empty', inspected_runs: 0, total_matching_runs: 0,
+    completed_jobs: 0, incomplete_jobs: 0, elapsed_job_minutes: 0,
     sample_warning: null, metric_note: 'Not billed minutes', workflows: [],
   });
   const lines = csv.trimEnd().split('\n');
   assert.equal(lines.length, 2);
-  assert.ok(lines[1].startsWith('"owner/empty",,,,,,,,0,0,'));
+  assert.ok(lines[1].startsWith('"summary","owner/empty",,,,,,0,0,0,0,0,'));
   assert.ok(lines[1].includes('"Not billed minutes"'));
 });
 
