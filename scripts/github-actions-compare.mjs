@@ -5,7 +5,7 @@
  */
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { auditRepository, validateRepository, validateSinceDate, validateDateRange, validateEvent, validateStatus } from './github-actions-audit.mjs';
+import { auditRepository, validateRepository, validateSinceDate, validateDateRange, validateEvent, validateStatus, csvCell } from './github-actions-audit.mjs';
 
 export const MAX_REPOSITORIES = 5;
 export const COMPARISON_NOTE =
@@ -38,10 +38,12 @@ export function parseComparisonArgs(args) {
   let status;
   let json = false;
   let markdown = false;
+  let csv = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
+    else if (arg === '--csv') csv = true;
     else if (arg === '--since') since = validateSinceDate(args[++i]);
     else if (arg === '--until') {
       if (!args[i + 1] || args[i + 1].startsWith('-')) {
@@ -65,9 +67,9 @@ export function parseComparisonArgs(args) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
     throw new Error('--limit must be between 1 and 100.');
   }
-  if (json && markdown) throw new Error('Choose either --json or --markdown, not both.');
+  if ([json, markdown, csv].filter(Boolean).length > 1) throw new Error('Choose either --json, --markdown or --csv (only one output format).');
   validateDateRange({ since, until });
-  return { repositories, limit, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), json, markdown };
+  return { repositories, limit, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), json, markdown, ...(csv ? { csv } : {}) };
 }
 
 /**
@@ -138,6 +140,21 @@ function escapeMarkdown(value) {
     .replace(/\r?\n/g, ' ').replaceAll('\r', ' ');
 }
 
+/** Flat CSV comparison with report caveats and explicit scope per repository. */
+export function renderComparisonCsv(report) {
+  const header = [
+    'repository', 'inspected_runs', 'total_matching_runs', 'failed_runs', 'scheduled_runs',
+    'completed_jobs', 'incomplete_jobs', 'elapsed_job_minutes', 'sample_warning',
+    'since', 'until', 'event', 'status', 'comparison_note',
+  ];
+  const rows = report.repositories.map(record => [
+    record.repository, record.inspected_runs, record.total_matching_runs,
+    record.failed_runs, record.scheduled_runs, record.completed_jobs,
+    record.incomplete_jobs, record.elapsed_job_minutes, record.sample_warning,
+    report.since, report.until, report.event, report.status, report.comparison_note,
+  ]);
+  return [header.join(','), ...rows.map(row => row.map(csvCell).join(','))].join('\n') + '\n';
+}
 export function renderComparisonMarkdown(report) {
   const lines = [
     '# GitHub Actions repository comparison',
@@ -174,7 +191,7 @@ export function renderComparisonMarkdown(report) {
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-compare.mjs owner/repo1 owner/repo2 [owner/repo3 ...] [--limit 10] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--event EVENT] [--status STATUS] [--json | --markdown]',
+    'Usage: node scripts/github-actions-compare.mjs owner/repo1 owner/repo2 [owner/repo3 ...] [--limit 10] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--event EVENT] [--status STATUS] [--json | --markdown | --csv]',
     'Compare 2–5 repositories. All GitHub API requests are GET; no Actions run is started.',
     'Use GH_TOKEN or GITHUB_TOKEN with Actions: read for private repositories.',
     'This is NOT a GitHub billing or cost report.',
@@ -196,6 +213,7 @@ async function main() {
     });
     if (options.json) return console.log(JSON.stringify(report, null, 2));
     if (options.markdown) return process.stdout.write(renderComparisonMarkdown(report));
+    if (options.csv) return process.stdout.write(renderComparisonCsv(report));
     console.log('GitHub Actions comparison | up to ' + report.limit_per_repository +
       ' runs per repo' + (report.since ? ' | since ' + report.since : '') +
       (report.until ? ' | until ' + report.until : '') +
