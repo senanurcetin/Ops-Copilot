@@ -28,7 +28,10 @@ node scripts/github-actions-compare.mjs owner/one owner/two --limit 10 --csv > c
 The standalone package exports the same two commands. Workflow rows contain stable numeric
 workflow IDs where GitHub supplies them, the sampled run count, API match count (when
 known), selected filters, incomplete coverage warnings and a metric caveat. A filter
-that finds zero runs still produces a metadata row. Comparison rows carry each
+that finds zero runs still produces a summary row. The single-repository export
+always includes a `record_type=summary` row for complete/incomplete job totals
+and `record_type=workflow` rows for individual workflows; filter by this field
+before summing elapsed time to avoid double-counting. Comparison rows carry each
 repository's coverage information and the non-ranking warning.
 
 Workflow names and other GitHub-controlled text are CSV-quoted, line breaks are flattened,
