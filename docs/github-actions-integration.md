@@ -25,6 +25,7 @@ Requirements: Node.js 20+; no npm install, cloud deployment or API key is requir
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --event schedule --status failure --limit 10 --markdown
 node scripts/github-actions-audit.mjs senanurcetin/ot-sentinel --limit 10 --json
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 10 --csv > actions-review.csv
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --since 2026-10-01 --until 2026-10-12 --branch main --limit 50 --markdown > actions-review.md
 node --test tests/github-actions-audit.test.mjs tests/github-actions-compare.test.mjs
 
@@ -63,6 +64,12 @@ npm run audit:github-actions-compare -- owner/one owner/two --limit 5
 - `--since YYYY-MM-DD` and `--until YYYY-MM-DD` define the same **inclusive UTC calendar-day range** for every compared repository. Either boundary can be used alone; a reversed date range fails before any API requests. GitHub's `created` search filter applies **before** the existing per-repository sample cap. Date-limited results are still not account-wide billing totals.
 - Same `--since YYYY-MM-DD` UTC lower bound applies to each repository. `--branch` is deliberately not available on the cross-repository command, because different repos may use different default branches; compare their unfiltered runs instead or use the single-repo auditor with explicit branches.
 - Sorting only makes the sample easier to read. Comparing observed job-minutes across repositories is **not a normalized efficiency score, budget total, or spend ranking**: workflows, activity levels, job complexity and sample truncation differ.
+
+## CSV export for spreadsheet and analytics tools
+
+The single-repository auditor supports `--csv` alongside `--json` and `--markdown` (choose exactly one). CSV has a `record_type=summary` row for repository-wide **sample totals** and `record_type=workflow` rows for each workflow ID. Filter by `record_type` before aggregation: summing summary and workflow records would double-count elapsed job-minutes.
+
+The summary includes `inspected_runs`, optional `total_matching_runs`, `sample_warning` and `metric_note` so sampling and billing caveats remain attached to the export. Even zero-run audits include a summary row. Workflow names are CSV-escaped, and formula-like text is prefixed with an apostrophe to reduce spreadsheet formula-injection risk. Do not publicly upload private repository metadata.
 
 ## REST reliability and request efficiency
 
