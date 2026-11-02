@@ -851,3 +851,15 @@ test('per-workflow completed and incomplete job counts reconcile to report total
   assert.equal(report.workflows.reduce((sum, w) => sum + w.job_count, 0), report.completed_jobs);
   assert.equal(report.workflows.reduce((sum, w) => sum + w.incomplete_jobs, 0), report.incomplete_jobs);
 });
+
+test('job durations reject impossible timestamps instead of normalizing source evidence', () => {
+  for (const impossibleStart of [
+    '2026-02-29T10:00:00Z',
+    '2026-04-31T10:00:00Z',
+    '2026-10-12T24:00:00Z',
+  ]) {
+    assert.equal(jobDurationMinutes(job(impossibleStart, '2026-11-01T12:00:00Z')), 0);
+  }
+  assert.equal(jobDurationMinutes(job('2024-02-29T10:00:00Z', '2024-02-29T10:02:00Z')), 2);
+  assert.equal(jobDurationMinutes(job('2026-10-12T10:00:00+02:00', '2026-10-12T08:02:00Z')), 2);
+});
