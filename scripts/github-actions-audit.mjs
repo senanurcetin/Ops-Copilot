@@ -412,8 +412,13 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     if (jobs.length !== expectedCount) {
       throw new Error('Unexpected GitHub API response: inconsistent job count for run ' + run.id + '.');
     }
-    const knownIds = jobs.filter(job => Number.isSafeInteger(job?.id) && job.id > 0)
-      .map(job => job.id);
+    // Every GitHub job has a positive, immutable integer ID. Filtering out
+    // invalid IDs before deduplication let fabricated/malformed jobs inflate
+    // completed-job counts and elapsed minutes without any integrity error.
+    const knownIds = jobs.map(job => job?.id);
+    if (knownIds.some(id => !Number.isSafeInteger(id) || id < 1)) {
+      throw new Error('Unexpected GitHub API response: invalid job ID for run ' + run.id + '.');
+    }
     if (new Set(knownIds).size !== knownIds.length) {
       throw new Error('Unexpected GitHub API response: duplicate job IDs for run ' + run.id + '.');
     }
