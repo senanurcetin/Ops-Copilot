@@ -374,13 +374,22 @@ export async function auditRepository({ repository, token, limit = 30, since, un
     throw new Error('Unexpected GitHub API response: invalid workflow run total_count.');
   }
   const runs = runsResult.workflow_runs.slice(0, limit);
-  const jobsByRun = new Map();
-  let truncated = false;
-  // Sequential reads deliberately respect unauthenticated and low-rate-limit accounts.
+  // GitHub run IDs must be unique within a sample. A stale or corrupted list
+  // must not count the same run twice or trigger duplicate job-detail GETs.
+  const seenRunIds = new Set();
   for (const run of runs) {
     if (!Number.isSafeInteger(run?.id) || run.id < 1) {
       throw new Error('Unexpected GitHub API response: invalid workflow run id.');
     }
+    if (seenRunIds.has(run.id)) {
+      throw new Error('Unexpected GitHub API response: duplicate workflow run id.');
+    }
+    seenRunIds.add(run.id);
+  }
+  const jobsByRun = new Map();
+  let truncated = false;
+  // Sequential reads deliberately respect unauthenticated and low-rate-limit accounts.
+  for (const run of runs) {
     const firstPage = await getJson(`${prefix}/actions/runs/${run.id}/jobs?per_page=100&page=1`, token, fetchImpl, cache);
     if (!firstPage || !Array.isArray(firstPage.jobs) ||
         !Number.isSafeInteger(firstPage.total_count) || firstPage.total_count < firstPage.jobs.length) {
