@@ -53,6 +53,17 @@ test('comparison CLI fails on invalid, repeated, oversized or ambiguous argument
   }
 });
 
+test('comparison CLI rejects duplicate scope and output flags', () => {
+  for (const args of [
+    ['a/one', 'a/two', '--since', '2026-01-01', '--since', '2026-10-01'],
+    ['a/one', 'a/two', '--status', 'success', '--status', 'failure'],
+    ['a/one', 'a/two', '--limit', '5', '--limit', '10'],
+    ['a/one', 'a/two', '--csv', '--csv'],
+  ]) {
+    assert.throws(() => parseComparisonArgs(args), /repeated option/i);
+  }
+});
+
 test('comparison reuses existing read-only auditor and respects query scope', async () => {
   const calls = [];
   const actual = await compareRepositories({
