@@ -65,4 +65,4 @@ GitHub API evidence endpoints (replace the run ID for each row):
 
 This is **a functioning GitHub API integration in active development**, shipped as a documented CLI inside a broader industrial AI repository. It is **not** presented as a published GitHub Marketplace App, registered OAuth application, hosted SaaS product, or a certified GitHub partner integration. No GitHub Developer Program acceptance is claimed.
 
-See [integration guide](github-actions-integration.md) for options and scope, and [Developer Program application materials](github-developer-program-application.md) for the official eligibility reference.
+See the [integration guide](github-actions-integration.md) for options and scope, and [GitHub's Developer Program documentation](https://docs.github.com/en/integrations/concepts/github-developer-program) for official eligibility. This repository does **not** publish application or acceptance evidence.
