@@ -18,7 +18,8 @@ import {
   validateStatus,
 } from '../scripts/github-actions-audit.mjs';
 
-const job = (started_at, completed_at) => ({ started_at, completed_at });
+let nextSyntheticJobId = 1;
+const job = (started_at, completed_at) => ({ id: nextSyntheticJobId++, started_at, completed_at });
 
 test('repository inputs are validated before constructing a URL', () => {
   assert.deepEqual(validateRepository('senanurcetin/Ops-Copilot'), ['senanurcetin', 'Ops-Copilot']);
@@ -228,8 +229,8 @@ test('pagination includes every job when GitHub splits results over multiple pag
     calls.push(url);
     let body;
     if (url.includes('/actions/runs?')) body = { workflow_runs: [{ id: 3, name: 'CI' }] };
-    else if (url.endsWith('&page=1')) body = { total_count: 101, jobs: Array(100).fill(oneMinute) };
-    else if (url.endsWith('&page=2')) body = { total_count: 101, jobs: [oneMinute] };
+    else if (url.endsWith('&page=1')) body = { total_count: 101, jobs: Array.from({ length: 100 }, (_, i) => ({ ...oneMinute, id: i + 1 })) };
+    else if (url.endsWith('&page=2')) body = { total_count: 101, jobs: [{ ...oneMinute, id: 101 }] };
     else throw new Error('Unexpected page');
     return { ok: true, json: async () => body };
   };
@@ -554,6 +555,26 @@ test('duplicated GitHub job IDs across API pages cannot inflate elapsed time', a
   });
   await assert.rejects(auditRepository({ repository: 'a/b', fetchImpl }),
     /duplicate job IDs for run 13/);
+});
+
+test('missing and malformed job IDs cannot be counted as elapsed minutes', async () => {
+  for (const jobs of [
+    [{ started_at: '2026-10-12T10:00:00Z', completed_at: '2026-10-12T10:01:00Z' }],
+    [{ id: null, started_at: '2026-10-12T10:00:00Z', completed_at: '2026-10-12T10:01:00Z' }],
+    [{ id: '13', started_at: '2026-10-12T10:00:00Z', completed_at: '2026-10-12T10:01:00Z' }],
+    [{ id: 0, started_at: '2026-10-12T10:00:00Z', completed_at: '2026-10-12T10:01:00Z' }],
+    [{ id: 12, started_at: '2026-10-12T10:00:00Z', completed_at: '2026-10-12T10:01:00Z' },
+      { started_at: '2026-10-12T10:01:00Z', completed_at: '2026-10-12T10:02:00Z' }],
+  ]) {
+    const fetchImpl = async url => ({ ok: true, json: async () =>
+      url.includes('/actions/runs?')
+        ? { total_count: 1, workflow_runs: [{ id: 50, name: 'CI' }] }
+        : { total_count: jobs.length, jobs } });
+    await assert.rejects(
+      auditRepository({ repository: 'a/b', fetchImpl }),
+      /invalid job id for run 50/i,
+    );
+  }
 });
 
 test('valid 500-job cap reports truncation instead of pretending an exhaustive result', async () => {
