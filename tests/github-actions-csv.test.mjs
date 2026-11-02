@@ -23,6 +23,14 @@ test('CSV strings are protected against formula injection in spreadsheets', () =
   assert.equal(csvCell('normal'), '"normal"');
 });
 
+test('CSV formula escaping covers invisible and bidirectional prefixes', () => {
+  for (const prefix of ['\u200b', '\u200d', '\u200e', '\u202e', '\u2060', '\u2066', '\u0000']) {
+    const input = prefix + '=1+1';
+    assert.equal(csvCell(input), '"' + "'" + input + '"');
+  }
+  assert.equal(csvCell('\u200bordinary'), '"\u200bordinary"');
+});
+
 test('auditor CSV format is exclusive with JSON and Markdown', () => {
   assert.deepEqual(parseArgs(['owner/repo', '--csv']), {
     repository: 'owner/repo', limit: 30, json: false, csv: true,

@@ -102,7 +102,10 @@ export function csvCell(value) {
     return String(value);
   }
   const plain = value.replace(/[\r\n]+/g, ' ');
-  const safe = /^\s*[=+\-@]/.test(plain) ? "'" + plain : plain;
+  // Some spreadsheet importers ignore invisible/bidi prefixes before formulas.
+  // The GitHub-provided workflow name is untrusted, including in CSV exports.
+  const formulaPrefix = /^[\s\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]*[=+\-@]/u;
+  const safe = formulaPrefix.test(plain) ? "'" + plain : plain;
   return '"' + safe.replaceAll('"', '""') + '"';
 }
 
