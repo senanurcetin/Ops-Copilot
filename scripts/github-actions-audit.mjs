@@ -466,8 +466,13 @@ export function parseArgs(args) {
   let branch;
   let event;
   let status;
+  const seenOptions = new Set();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (arg.startsWith('--')) {
+      if (seenOptions.has(arg)) throw new Error('Repeated option: ' + arg);
+      seenOptions.add(arg);
+    }
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--csv') csv = true;
