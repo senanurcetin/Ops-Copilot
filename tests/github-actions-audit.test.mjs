@@ -122,6 +122,17 @@ test('UTC since-date filter rejects impossible dates and malformed input', () =>
   assert.throws(() => parseArgs(['a/b', '--json', '--markdown']), /either/);
 });
 
+test('CLI rejects repeated scope and output flags rather than silently overriding them', () => {
+  for (const args of [
+    ['a/b', '--since', '2026-01-01', '--since', '2026-10-01'],
+    ['a/b', '--limit', '5', '--limit', '10'],
+    ['a/b', '--branch', 'main', '--branch', 'dev'],
+    ['a/b', '--json', '--json'],
+  ]) {
+    assert.throws(() => parseArgs(args), /repeated option/i);
+  }
+});
+
 test('date filter is sent to GitHub REST API without write requests', async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
