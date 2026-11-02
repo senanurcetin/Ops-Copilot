@@ -5,6 +5,7 @@
  * The durations reported are estimates, NOT GitHub billing totals.
  */
 import { resolve } from 'node:path';
+import { saveNewReportFile, validateReportPath } from './actions-report-file.mjs';
 import { fileURLToPath } from 'node:url';
 
 const API = 'https://api.github.com';
@@ -469,7 +470,7 @@ export async function auditRepository({ repository, token, limit = 30, since, un
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown | --csv]',
+    'Usage: node scripts/github-actions-audit.mjs owner/repo [--limit 30] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--branch REF] [--event EVENT] [--status STATUS] [--json | --markdown | --csv] [--output-file PATH]',
     'Optional: GH_TOKEN or GITHUB_TOKEN for private repositories and higher API limits.',
     'Required permissions for fine-grained tokens: Actions (read-only).',
     'No GitHub Actions runner is required to execute this tool locally.',
@@ -488,6 +489,7 @@ export function parseArgs(args) {
   let branch;
   let event;
   let status;
+  let outputFile;
   const seenOptions = new Set();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -498,6 +500,7 @@ export function parseArgs(args) {
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--csv') csv = true;
+    else if (arg === '--output-file') outputFile = validateReportPath(args[++i]);
     else if (arg === '--since') since = validateSinceDate(args[++i]);
     else if (arg === '--until') {
       if (!args[i + 1] || args[i + 1].startsWith('-')) {
@@ -518,8 +521,9 @@ export function parseArgs(args) {
   validateRepository(repository);
   if (limit < 1 || limit > 100) throw new Error('--limit must be between 1 and 100.');
   if ([json, markdown, csv].filter(Boolean).length > 1) throw new Error('Choose either --json, --markdown or --csv (only one output format).');
+  if (outputFile && !(json || markdown || csv)) throw new Error('--output-file requires --json, --markdown or --csv.');
   validateDateRange({ since, until });
-  return { repository, limit, json, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}), ...(csv ? { csv } : {}) };
+  return { repository, limit, json, ...(outputFile ? { outputFile } : {}), ...(since ? { since } : {}), ...(until ? { until } : {}), ...(branch ? { branch } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), ...(markdown ? { markdown } : {}), ...(csv ? { csv } : {}) };
 }
 
 async function main() {
@@ -536,6 +540,13 @@ async function main() {
       status: options.status,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
+    if (options.outputFile) {
+      const body = options.json ? JSON.stringify(data, null, 2) + '\n'
+        : options.markdown ? renderMarkdownReport(data) : renderCsvReport(data);
+      const saved = await saveNewReportFile(options.outputFile, body);
+      console.log('Report saved: ' + saved);
+      return;
+    }
     if (options.json) return console.log(JSON.stringify(data, null, 2));
     if (options.markdown) return process.stdout.write(renderMarkdownReport(data));
     if (options.csv) return process.stdout.write(renderCsvReport(data));
