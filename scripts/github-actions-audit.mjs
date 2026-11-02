@@ -168,12 +168,31 @@ export function renderMarkdownReport(report) {
   return rows.join('\n') + '\n';
 }
 
+// Date.parse normalizes invalid dates such as Feb 29 in a non-leap year.
+// Never convert an impossible source date into a fabricated job duration.
+function parseStrictJobTimestamp(value) {
+  if (typeof value !== 'string') return null;
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!parts) return null;
+  const [, yr, mo, da, hr, mi, se, , offsetHour, offsetMinute] = parts;
+  const [year, month, day, hour, minute, second] = [yr, mo, da, hr, mi, se].map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1] ||
+      hour > 23 || minute > 59 || second > 59 ||
+      (offsetHour !== undefined && (Number(offsetHour) > 23 || Number(offsetMinute) > 59))) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 // A zero-minute job is valid. Missing or invalid timestamps are *not*.
 function completedJobMinutes(job) {
   if (typeof job?.started_at !== 'string' || typeof job?.completed_at !== 'string') return null;
-  const start = Date.parse(job.started_at);
-  const end = Date.parse(job.completed_at);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  const start = parseStrictJobTimestamp(job.started_at);
+  const end = parseStrictJobTimestamp(job.completed_at);
+  if (start === null || end === null || end < start) return null;
   return (end - start) / 60000;
 }
 
