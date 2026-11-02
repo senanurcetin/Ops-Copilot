@@ -199,6 +199,28 @@ test('invalid workflow identifiers and job collections cannot silently underesti
   }), /invalid workflow run id/);
 });
 
+test('duplicate workflow run IDs are rejected before fetching jobs', async () => {
+  const calls = [];
+  const fetchImpl = async url => {
+    calls.push(url);
+    if (!url.includes('/actions/runs?')) {
+      throw new Error('Duplicate-run response must not trigger job requests.');
+    }
+    return { ok: true, json: async () => ({
+      total_count: 2,
+      workflow_runs: [
+        { id: 42, workflow_id: 10, name: 'First', event: 'push' },
+        { id: 42, workflow_id: 10, name: 'Duplicated', event: 'push' },
+      ],
+    }) };
+  };
+  await assert.rejects(
+    auditRepository({ repository: 'a/b', fetchImpl }),
+    /duplicate workflow run id/i,
+  );
+  assert.equal(calls.length, 1);
+});
+
 test('pagination includes every job when GitHub splits results over multiple pages', async () => {
   const calls = [];
   const oneMinute = job('2026-10-12T10:00:00Z', '2026-10-12T10:01:00Z');
