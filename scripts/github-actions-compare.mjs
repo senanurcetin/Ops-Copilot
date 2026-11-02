@@ -4,6 +4,7 @@
  * All API calls are read-only; this tool does not trigger GitHub Actions.
  */
 import { resolve } from 'node:path';
+import { saveNewReportFile, validateReportPath } from './actions-report-file.mjs';
 import { fileURLToPath } from 'node:url';
 import { auditRepository, validateRepository, validateSinceDate, validateDateRange, validateEvent, validateStatus, csvCell } from './github-actions-audit.mjs';
 
@@ -39,6 +40,7 @@ export function parseComparisonArgs(args) {
   let json = false;
   let markdown = false;
   let csv = false;
+  let outputFile;
   const seenOptions = new Set();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -49,6 +51,7 @@ export function parseComparisonArgs(args) {
     if (arg === '--json') json = true;
     else if (arg === '--markdown') markdown = true;
     else if (arg === '--csv') csv = true;
+    else if (arg === '--output-file') outputFile = validateReportPath(args[++i]);
     else if (arg === '--since') since = validateSinceDate(args[++i]);
     else if (arg === '--until') {
       if (!args[i + 1] || args[i + 1].startsWith('-')) {
@@ -73,8 +76,9 @@ export function parseComparisonArgs(args) {
     throw new Error('--limit must be between 1 and 100.');
   }
   if ([json, markdown, csv].filter(Boolean).length > 1) throw new Error('Choose either --json, --markdown or --csv (only one output format).');
+  if (outputFile && !(json || markdown || csv)) throw new Error('--output-file requires --json, --markdown or --csv.');
   validateDateRange({ since, until });
-  return { repositories, limit, ...(since ? { since } : {}), ...(until ? { until } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), json, markdown, ...(csv ? { csv } : {}) };
+  return { repositories, limit, ...(outputFile ? { outputFile } : {}), ...(since ? { since } : {}), ...(until ? { until } : {}), ...(event ? { event } : {}), ...(status ? { status } : {}), json, markdown, ...(csv ? { csv } : {}) };
 }
 
 /**
@@ -196,7 +200,7 @@ export function renderComparisonMarkdown(report) {
 
 function usage() {
   return [
-    'Usage: node scripts/github-actions-compare.mjs owner/repo1 owner/repo2 [owner/repo3 ...] [--limit 10] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--event EVENT] [--status STATUS] [--json | --markdown | --csv]',
+    'Usage: node scripts/github-actions-compare.mjs owner/repo1 owner/repo2 [owner/repo3 ...] [--limit 10] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--event EVENT] [--status STATUS] [--json | --markdown | --csv] [--output-file PATH]',
     'Compare 2–5 repositories. All GitHub API requests are GET; no Actions run is started.',
     'Use GH_TOKEN or GITHUB_TOKEN with Actions: read for private repositories.',
     'This is NOT a GitHub billing or cost report.',
@@ -216,6 +220,13 @@ async function main() {
       status: options.status,
       token: process.env.GH_TOKEN || process.env.GITHUB_TOKEN,
     });
+    if (options.outputFile) {
+      const body = options.json ? JSON.stringify(report, null, 2) + '\n'
+        : options.markdown ? renderComparisonMarkdown(report) : renderComparisonCsv(report);
+      const saved = await saveNewReportFile(options.outputFile, body);
+      console.log('Report saved: ' + saved);
+      return;
+    }
     if (options.json) return console.log(JSON.stringify(report, null, 2));
     if (options.markdown) return process.stdout.write(renderComparisonMarkdown(report));
     if (options.csv) return process.stdout.write(renderComparisonCsv(report));
