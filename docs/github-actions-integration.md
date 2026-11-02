@@ -123,7 +123,7 @@ Integration repository: https://github.com/senanurcetin/Ops-Copilot
 
 Reproducible public API demonstration: [github-api-live-demo.md](github-api-live-demo.md)
 
-Developer Program eligibility and submission evidence: [github-developer-program-application.md](github-developer-program-application.md)
+Developer Program eligibility: [GitHub's official program documentation](https://docs.github.com/en/integrations/concepts/github-developer-program). **No public application record or acceptance certificate is included in this repository.**
 
 Project support: **senanur.cetin.work@gmail.com**
 
