@@ -1,5 +1,10 @@
 # Ops-Copilot — Document-Grounded Industrial AI Assistant
 
+> **Reviewer map · 2 November 2026:** This repository has two **separate** lines of work: [industrial troubleshooting/RAG and SECOM research](docs/case-study.md) and a [read-only GitHub Actions REST auditor](docs/github-actions-integration.md) with [public API demonstration evidence](docs/github-api-live-demo.md). Review [local setup](#local-setup), [quality checks](#quality-checks) and [operational limits](#scope-and-operational-boundaries) before interpreting screenshots or integration claims.
+>
+> **Do not infer:** the public sign-in screenshot is **not** an authenticated operator session; document-grounded advice is not certified industrial safety guidance; the GitHub auditor's data and tests do not constitute a GitHub partnership or developer-program acceptance.
+
+
 <p align="right"><img src="docs/assets/nexus-official-midnight.svg" alt="NEXUS Official Midnight brand" width="220"></p>
 
 **Next.js · Firebase · Genkit/Gemini · Document retrieval · Operator checklists · SECOM ML case study**
