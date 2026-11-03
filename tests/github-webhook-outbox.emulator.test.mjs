@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestore-outbox.mjs';
 import { createDualAnchorWebhookOutbox } from '../scripts/github-webhook-dual-anchor-outbox.mjs';
+import { createWebhookLegacyAnchorBackfill } from '../scripts/github-webhook-legacy-anchor-backfill.mjs';
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
 import { createWebhookOutboxCompactor } from '../scripts/github-webhook-outbox-retention.mjs';
@@ -535,5 +536,95 @@ test('Firestore rules deny browser clients access to permanent GUID anchors', as
     await assert.rejects(setDoc(ref,{kind:'github_workflow_delivery'}),/permission|PERMISSION_DENIED/i);
   } finally {
     await deleteClientApp(app);
+  }
+});
+
+
+test('two Admin clients transactionally backfill legacy GUID, then dual adapter rejects replay', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const c = newAdmin();
+  const deliveryId = randomUUID();
+  const enqueuedAtMs = 1700000000000;
+  const workRef = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  const anchorRef = a.db.doc('githubWebhookDedupAnchors/' + deliveryId);
+  const work = {
+    deliveryId, event:'workflow_run', action:'completed',
+    installationId:11, repositoryId:42, repository:'example/private-repo',
+    workflowRunId:765,
+  };
+  const legacy = {
+    ...work, state:'completed', attempts:3,
+    enqueuedAtMs, completedAtMs:enqueuedAtMs+12000,
+  };
+  try {
+    await workRef.create(legacy);
+    const opts = {authorizeBackfill:async()=>true,nowMs:()=>enqueuedAtMs+20000};
+    const callbacks = [
+      createWebhookLegacyAnchorBackfill(a.db, opts),
+      createWebhookLegacyAnchorBackfill(b.db, opts),
+    ];
+    const requests = Array.from({length:16}, (_, i) =>
+      callbacks[i%2]({
+        deliveryId, operatorId:'owner-reviewer',
+        expectedEnqueuedAtMs:enqueuedAtMs,
+      }));
+    const outcomes = await Promise.all(requests);
+    assert.equal(outcomes.filter(x=>x.status==='anchored').length,1);
+    assert.equal(outcomes.filter(x=>x.status==='already_anchored').length,15);
+    assert.deepEqual((await anchorRef.get()).data(), {
+      kind:'github_workflow_delivery', recordedAtMs:enqueuedAtMs+20000,
+    });
+    assert.deepEqual((await workRef.get()).data(),legacy);
+    assert.equal(await createDualAnchorWebhookOutbox(c.db)(work),false);
+    // Synthetic demo-only delete: the new adapter still rejects replay.
+    await workRef.delete();
+    assert.equal((await workRef.get()).exists,false);
+    assert.equal(await createDualAnchorWebhookOutbox(c.db)(work),false);
+    assert.equal((await workRef.get()).exists,false);
+    assert.equal((await anchorRef.get()).exists,true);
+  } finally {
+    await Promise.allSettled([workRef.delete(),anchorRef.delete()]);
+    await Promise.all([closeAdmin(a),closeAdmin(b),closeAdmin(c)]);
+  }
+});
+
+test('legacy adapter remains unsafe after synthetic work deletion despite backfilled anchor', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const deliveryId = randomUUID();
+  const enqueuedAtMs = 1700000000000;
+  const workRef = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  const anchorRef = a.db.doc('githubWebhookDedupAnchors/' + deliveryId);
+  const work = {
+    deliveryId,event:'workflow_run',action:'completed',
+    installationId:11,repositoryId:42,repository:'example/private-repo',
+    workflowRunId:765,
+  };
+  try {
+    await workRef.create({
+      ...work,state:'dead',attempts:5,enqueuedAtMs,
+      leaseOwner:null,leaseToken:null,leaseUntilMs:0,
+    });
+    const migrate=createWebhookLegacyAnchorBackfill(a.db,{
+      authorizeBackfill:async()=>true,nowMs:()=>enqueuedAtMs+2000,
+    });
+    assert.deepEqual(await migrate({
+      deliveryId,operatorId:'owner-reviewer',
+      expectedEnqueuedAtMs:enqueuedAtMs,
+    }),{status:'anchored'});
+    // No production data is ever deleted by this test. This synthetic test
+    // demonstrates why the old live adapter must be fully retired BEFORE
+    // allowing TTL/deletion even after a successful anchor backfill.
+    await workRef.delete();
+    assert.equal((await anchorRef.get()).exists,true);
+    assert.equal(await createDualAnchorWebhookOutbox(b.db)(work),false);
+    assert.equal(await createFirestoreWebhookOutbox(b.db)(work),true);
+    assert.equal((await workRef.get()).exists,true);
+  } finally {
+    await Promise.allSettled([workRef.delete(),anchorRef.delete()]);
+    await Promise.all([closeAdmin(a),closeAdmin(b)]);
   }
 });

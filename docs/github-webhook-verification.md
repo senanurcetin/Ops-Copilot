@@ -384,3 +384,41 @@ migration before a finite outbox retention policy could be considered.
 The dual-collection design also adds a permanent record/write per
 delivery, so it is **not** claimed to save real Firestore billed storage
 or be free at scale. Retention costs and owner approval are still open.
+
+
+## Emulator-only rehearsal: legacy GUID anchor backfill
+
+`scripts/github-webhook-legacy-anchor-backfill.mjs` is a **dormant,
+single-GUID-at-a-time callable primitive**. No CLI, endpoint, scheduler,
+collection enumeration, production Admin SDK initialization or automatic
+migration is enabled. Its mandatory `authorizeBackfill` callback must
+independently authenticate the operator and confirm owner authorization.
+A callback that returns `true` in tests is **not** production security.
+
+For one explicitly supplied **lowercase** GUID and expected enqueue
+timestamp, the Firestore transaction reads the original legacy outbox
+record and the target permanent anchor before any write. It refuses
+missing, corrupt or stale historical records. If a valid anchor already
+exists it is idempotent; otherwise it creates only the minimal
+`githubWebhookDedupAnchors/{deliveryId}` document with
+`kind` and `recordedAtMs`. Original queued/processing/completed/dead
+work records remain byte-for-byte unchanged. Errors are sanitized.
+
+The localhost demo emulator CI tests 16 concurrent backfills across
+two independent Admin SDK clients, verifies the original record is
+untouched and proves the **new dual-anchor adapter** still rejects a
+replayed delivery if a *synthetic test outbox record* is removed.
+
+**Critical cutover failure evidence:** a separate emulator regression
+demonstrates that the **existing single-collection adapter can still
+enqueue a duplicate after synthetic outbox deletion even when a backfilled
+anchor exists**. The production adapter has **not been switched**.
+Consequently the migration primitive is NOT a complete or approved
+collection-wide migration and **does not justify enabling TTL or deleting
+a single production GUID**.
+
+Historical uppercase GUIDs are accepted by the original single-collection
+adapter but are excluded by this rehearsal. Collection-wide coverage,
+mixed-case identity reconciliation, concurrent ingestion cutover,
+authoritative usage and billing review, privacy/retention policy and
+owner approval are all still outstanding.
