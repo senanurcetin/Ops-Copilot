@@ -346,3 +346,41 @@ risk converting a valid redelivery into a new queued work item.
 delivery GUID and do not start a live listener or worker. Any change
 requires separate owner authorization, production quota evidence and a
 verified durable deduplication migration.
+
+
+## Experimental dual-collection GUID anchor (not activated)
+
+`scripts/github-webhook-dual-anchor-outbox.mjs` exports an **optional,
+server-only** `createDualAnchorWebhookOutbox(adminFirestore)` adapter.
+It is **not** connected to the current webhook gate, HTTP handler or
+worker. The existing single-collection outbox remains unchanged.
+
+For an already authorized `workflow_run.completed` delivery with a
+strict lower-case GUID, a single Firestore transaction reads both
+`githubWebhookDedupAnchors/{deliveryId}` and the original
+`githubWebhookOutbox/{deliveryId}`. If either exists, the call returns
+`false` without writes. Otherwise the transaction creates both records
+atomically. The permanent anchor has the GUID as its document ID and
+contains **only** `kind` and `recordedAtMs`; no payload, access token,
+repository metadata, expiration timestamp or TTL field is written.
+
+This provides a **test-only candidate design** for retaining the immutable
+GUID deduplication key if an outbox work document were ever removed.
+The real localhost emulator CI suite checks 24 concurrent signed
+deliveries from two Admin clients, then removes only a **synthetic**
+outbox document and verifies that a third client still rejects replay
+because the permanent anchor remains. It also checks legacy records
+and browser security-rule denial for the anchor collection.
+
+**Non-negotiable migration limitation:** the current production path
+creates only single-collection outbox documents. This optional adapter
+does **not** automatically backfill legacy GUIDs. If an existing
+unanchored outbox document were deleted, its historical GUID would be
+forgotten. Thus **no live TTL/deletion, adapter switch, backfill or
+production worker activation is approved**. All historical GUIDs
+would need a separately tested, complete and audited transactional
+migration before a finite outbox retention policy could be considered.
+
+The dual-collection design also adds a permanent record/write per
+delivery, so it is **not** claimed to save real Firestore billed storage
+or be free at scale. Retention costs and owner approval are still open.
