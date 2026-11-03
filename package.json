@@ -28,7 +28,8 @@
     "auditor:package": "node scripts/build-github-auditor-package.mjs",
     "auditor:pack:dry-run": "npm run auditor:package && npm pack --dry-run ./dist/github-actions-auditor",
     "test:github-app": "node --test tests/github-app-auth.test.mjs",
-    "audit:github-app": "node scripts/github-app-audit.mjs"
+    "audit:github-app": "node scripts/github-app-audit.mjs",
+    "report:github-webhook-retention": "node scripts/github-webhook-retention-report.mjs"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.43.0",

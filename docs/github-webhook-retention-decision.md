@@ -31,3 +31,22 @@ Reference: Issue #95, PRs #96–#101.
 - [ ] Explicit production enablement authorized separately
 
 **Current decision:** keep TTL disabled and existing GUID anchors intact. This document is a proposal, not proof of an owner sign-off or an applied cloud setting.
+
+
+## Free-tier and TTL release boundary (documented 3 November 2026)
+
+Firebase's [Firestore billing documentation](https://firebase.google.com/docs/firestore/pricing)
+specifies that TTL delete operations require billing and do not qualify
+for free usage. [Google Cloud's TTL documentation](https://docs.cloud.google.com/firestore/native/docs/ttl)
+also specifies asynchronous, nontransactional expiry.
+
+- [ ] **Explicit owner consent for a paid Firestore feature** (not granted)
+- [ ] **Separate implementation preserving signed-webhook deduplication** after document expiry (not implemented)
+- [ ] **Observed project usage, limits, index overhead and costs reviewed** (not measured)
+- [ ] **Formal production release approval** (not granted)
+
+Until all these controls are separately satisfied, enabling TTL or
+hard-deleting GUID documents is prohibited. The local report CLI can
+prepare aggregate, sample-only evidence but **cannot** sign off a
+retention policy, read actual billable storage or authorize production
+settings.
