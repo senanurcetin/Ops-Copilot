@@ -1,3 +1,4 @@
+import './github-webhook-dual-anchor-outbox.test.mjs';
 import './github-webhook-retention-report.test.mjs';
 import './github-webhook-retention-inventory.test.mjs';
 import './github-webhook-outbox-retention.test.mjs';

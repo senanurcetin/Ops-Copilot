@@ -11,6 +11,7 @@ import {
   doc, getDoc, setDoc,
 } from 'firebase/firestore';
 import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestore-outbox.mjs';
+import { createDualAnchorWebhookOutbox } from '../scripts/github-webhook-dual-anchor-outbox.mjs';
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
 import { createWebhookOutboxCompactor } from '../scripts/github-webhook-outbox-retention.mjs';
@@ -447,5 +448,92 @@ test('read-only inventory measures emulator documents without leaking delivery I
   } finally {
     await Promise.allSettled(refs.map(ref => ref.delete()));
     await closeAdmin(a);
+  }
+});
+
+
+test('optional dual-anchor outbox retains GUID after synthetic work deletion across real Admin clients', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const c = newAdmin();
+  const deliveryId = randomUUID();
+  const signed = makeDelivery(deliveryId);
+  const workRef = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  const anchorRef = a.db.doc('githubWebhookDedupAnchors/' + deliveryId);
+  try {
+    const callbacks = [
+      createDualAnchorWebhookOutbox(a.db),
+      createDualAnchorWebhookOutbox(b.db),
+    ];
+    const results = await Promise.all(Array.from({length:24}, (_, index) =>
+      enqueueAuthorizedGitHubDelivery({
+        ...CONFIG, ...signed, enqueueOnce:callbacks[index % 2],
+      })));
+    assert.equal(results.filter(x => x.status === 'enqueued').length, 1);
+    assert.equal(results.filter(x => x.status === 'duplicate').length, 23);
+    assert.equal((await workRef.get()).exists, true);
+    const anchor = await anchorRef.get();
+    assert.equal(anchor.exists, true);
+    assert.deepEqual(anchor.data(), {
+      kind:'github_workflow_delivery',
+      recordedAtMs:anchor.data().recordedAtMs,
+    });
+    assert.ok(Number.isSafeInteger(anchor.data().recordedAtMs));
+    // Delete only a synthetic emulator work doc. Anchor is never deleted in
+    // production; the test proves its behavior after hypothetical expiry.
+    await workRef.delete();
+    assert.equal((await workRef.get()).exists, false);
+    const replay = await enqueueAuthorizedGitHubDelivery({
+      ...CONFIG, ...signed, enqueueOnce:createDualAnchorWebhookOutbox(c.db),
+    });
+    assert.equal(replay.status, 'duplicate');
+    assert.equal((await workRef.get()).exists, false);
+    assert.equal((await anchorRef.get()).exists, true);
+  } finally {
+    // Test-only cleanup of synthetic demo-emulator fixtures.
+    await Promise.allSettled([workRef.delete(), anchorRef.delete()]);
+    await Promise.all([closeAdmin(a), closeAdmin(b), closeAdmin(c)]);
+  }
+});
+
+test('optional dual-anchor adapter refuses legacy outbox duplicates without automatic migration', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const deliveryId = randomUUID();
+  const legacyRef = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  const anchorRef = a.db.doc('githubWebhookDedupAnchors/' + deliveryId);
+  try {
+    await legacyRef.set({state:'completed',deliveryId});
+    const result = await createDualAnchorWebhookOutbox(b.db)({
+      deliveryId, event:'workflow_run', action:'completed',
+      installationId:11, repositoryId:42,
+      repository:'example/private-repo', workflowRunId:765,
+    });
+    assert.equal(result,false);
+    assert.equal((await anchorRef.get()).exists,false);
+    assert.equal((await legacyRef.get()).exists,true);
+  } finally {
+    await Promise.allSettled([legacyRef.delete(),anchorRef.delete()]);
+    await Promise.all([closeAdmin(a),closeAdmin(b)]);
+  }
+});
+
+test('Firestore rules deny browser clients access to permanent GUID anchors', async () => {
+  assertLocalOnly();
+  const app = initializeClientApp({
+    apiKey:'demo-emulator-only',
+    authDomain:PROJECT_ID+'.firebaseapp.com',
+    projectId:PROJECT_ID,
+  },'anchor-client-'+randomUUID());
+  try {
+    const client = getClientFirestore(app);
+    connectFirestoreEmulator(client,'127.0.0.1',8080);
+    const ref = doc(client,'githubWebhookDedupAnchors',randomUUID());
+    await assert.rejects(getDoc(ref),/permission|PERMISSION_DENIED/i);
+    await assert.rejects(setDoc(ref,{kind:'github_workflow_delivery'}),/permission|PERMISSION_DENIED/i);
+  } finally {
+    await deleteClientApp(app);
   }
 });

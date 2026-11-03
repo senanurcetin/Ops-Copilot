@@ -50,3 +50,26 @@ hard-deleting GUID documents is prohibited. The local report CLI can
 prepare aggregate, sample-only evidence but **cannot** sign off a
 retention policy, read actual billable storage or authorize production
 settings.
+
+
+## Experimental dual-anchor design review (not deployed)
+
+The opt-in `createDualAnchorWebhookOutbox` module is a candidate
+transactional design: insert a permanent minimal GUID record in
+`githubWebhookDedupAnchors` and the outbox work document in the same
+Firestore transaction. The existing adapter is **not changed or
+reconfigured**. The local emulator suite proves concurrency behavior,
+client access denial and duplicate rejection after a **synthetic test**
+outbox deletion.
+
+- [ ] Owner approves the additional long-lived collection and its cost
+- [ ] Existing single-collection GUIDs are fully migrated and reconciled
+- [ ] All active ingestion paths transition atomically without a race window
+- [ ] Billed write/read/index/storage overhead is measured with actual project data
+- [ ] Policy and legal retention horizon are decided and approved
+- [ ] No paid TTL/deletion is enabled without separate explicit authorization
+
+Keeping both the original records and any candidate anchors indefinitely
+is safer for replay protection than deleting history, but it is not a
+storage-cost optimization. This review is informational; no migration
+tool, live caller or Firebase configuration change is enabled.
