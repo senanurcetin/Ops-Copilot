@@ -104,3 +104,32 @@ Successful unit tests and localhost emulators are necessary technical
 evidence but do not replace production-level authorization, IAM review,
 independent monitoring/cost verification, owner decision or a measured
 staging rollback rehearsal. The default release status is **NO-GO**.
+
+
+## 6. Structured measured replay evidence (localhost only)
+
+The real [Admin outage emulator test](../tests/github-webhook-admin-outage.emulator.test.mjs)
+now captures **one** monotonic \`performance.now()\` interval starting just
+after the local proxy is restored and ending when a fresh process has
+replayed the original synthetic GUID, confirmed durable record identity
+and independently rejected a duplicate enqueue.
+
+After the strict assertions pass, CI logs one \`SYNTHETIC_RECOVERY_EVIDENCE\`
+JSON object with \`measuredReplayVerificationMs\`, \`sampleCount: 1\`,
+a fixed localhost scenario name, and explicit \`false\` values for
+production RTO, production RPO, staging rollback and release authorization.
+No GUID, customer document, repository identifier or token is printed.
+Invalid timing or missing asserted invariants are rejected by
+the [pure metric formatter](../scripts/github-webhook-recovery-evidence.mjs)
+and six offline regression tests.
+
+This **one-sample** measurement includes fresh Node process startup,
+Admin SDK connection, Firestore emulator response and replay verification
+after reconnection. It does NOT measure the duration of the outage, a
+restored Vercel/Firebase hosted service, data-loss recovery, P95/P99,
+or any production SLO. CI machine load makes times non-comparable unless
+runtime, hardware, test SHA and repeated sampling are controlled.
+
+Record the exact run/job link and observed numeric value from real
+successful CI logs before presenting a numerical result; never invent
+a duration. Owner-approved staging rollback measurement remains OPEN.

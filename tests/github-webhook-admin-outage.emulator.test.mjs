@@ -7,6 +7,8 @@ import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 import {initializeApp, deleteApp} from 'firebase-admin/app';
 import {getFirestore} from 'firebase-admin/firestore';
+import {performance} from 'node:perf_hooks';
+import {formatSyntheticRecoveryEvidence} from '../scripts/github-webhook-recovery-evidence.mjs';
 import {createFirestoreWebhookOutbox} from '../scripts/github-webhook-firestore-outbox.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -97,6 +99,7 @@ test('real Admin SDK through isolated TCP proxy: disconnect, process loss, fresh
     blocked = null;
 
     online = true;
+    const verificationStartMs = performance.now();
     const afterRestart = await execFileAsync(
       process.execPath, [fixturePath, 'replay', interruptedId],
       {env: childEnv, timeout: 20000, maxBuffer: 4096},
@@ -114,6 +117,17 @@ test('real Admin SDK through isolated TCP proxy: disconnect, process loss, fresh
       installationId: 11, repositoryId: 42,
       repository: 'example/private-repo', workflowRunId: 765,
     }), false);
+    // One monotonic localhost recovery measurement, measured AFTER the
+    // proxy is online through durable-state and duplicate-replay assertions.
+    // This is NOT production RTO, RPO or a staged deployment rollback.
+    const replayVerificationMs = Math.ceil(performance.now() - verificationStartMs);
+    const evidence = formatSyntheticRecoveryEvidence({
+      replayVerificationMs,
+      disconnectedWriteUnacknowledged: true,
+      durableWorkVerified: true,
+      duplicateReplayRejected: true,
+    });
+    process.stdout.write('SYNTHETIC_RECOVERY_EVIDENCE ' + JSON.stringify(evidence) + '\n');
   } finally {
     if (blocked) {
       blocked.kill('SIGKILL');
