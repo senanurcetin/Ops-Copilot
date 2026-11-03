@@ -88,3 +88,25 @@ Offline focused verification:
 ```bash
 node --test tests/github-webhook-http.test.mjs
 ```
+
+
+## Firestore emulator acceptance testing (GitHub Developer Issue #95)
+
+`npm run test:firestore:emulator` includes a real **Firebase Admin SDK**
+webhook outbox transaction suite in addition to existing tenant isolation
+checks. It refuses to run unless both emulator hosts are localhost
+(`127.0.0.1:8080` and `127.0.0.1:9099`) and
+`FIREBASE_PROJECT_ID=demo-nexus-ops-isolation`. The existing isolated
+GitHub Actions `firestore-isolation` job runs this suite with
+`firebase-tools@14 emulators:exec`; it never uses a production project.
+
+It checks 24 simultaneous signed deliveries across two Admin Firestore
+clients (one queued, all others duplicates), persistence observed from a
+new client, fail-closed installation/repository and event filtering,
+HTTP 503 after a deliberately rolled-back real emulator transaction (no HTTP 202 and no record), and Firestore rules
+denying direct browser reads/writes of the admin-only outbox collection.
+
+**Boundary:** emulator evidence is not live deployment approval. Worker
+claim/lease state transitions, bounded retries, poison/dead-letter policy,
+retention, production secret provisioning and end-to-end operations
+remain separate gates. No service is started by importing these modules.
