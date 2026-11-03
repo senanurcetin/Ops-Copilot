@@ -24,3 +24,13 @@ test('workflow preserves JSON scan artifact and cannot silently deploy', () => {
   assert.match(content, /if:\s*always\(\)/);
   assert.doesNotMatch(content, /firebase deploy|vercel --prod|npm publish/i);
 });
+
+
+test('security scanner must fail closed when its JSON evidence is missing or stale', () => {
+  assert.match(content, /name: Verify OWASP report integrity and declared NVD freshness/);
+  assert.match(content, /run: node scripts\/verify-dependencycheck-report\.mjs/);
+  const verify = content.indexOf('name: Verify OWASP report integrity');
+  const upload = content.indexOf('name: Upload results');
+  assert.ok(verify > 0 && upload > verify);
+  assert.match(content.slice(verify,upload), /if: always\(\)/);
+});
