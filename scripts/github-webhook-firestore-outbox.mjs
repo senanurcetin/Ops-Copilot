@@ -21,7 +21,7 @@ export function createFirestoreWebhookOutbox(firestore) {
   return async function enqueueOnce(work) {
     if (!work || typeof work !== 'object' ||
         typeof work.deliveryId !== 'string' ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(work.deliveryId) ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(work.deliveryId) ||
         work.event !== 'workflow_run' || work.action !== 'completed' ||
         !Number.isSafeInteger(work.installationId) || work.installationId <= 0 ||
         !Number.isSafeInteger(work.repositoryId) || work.repositoryId <= 0 ||
