@@ -73,7 +73,7 @@ test.describe('Public GitHub Actions Explorer — synthetic network-only E2E', (
     await page.goto(explorer);
     await page.getByRole('textbox', { name: 'GitHub repository' }).fill('invalid-repository');
     await page.getByRole('button', { name: 'Analyze repository' }).click();
-    await expect(page.getByRole('alert')).toHaveText('Enter a public repository as owner/name.');
+    await expect(page.getByRole('region', { name: 'Repository selector' }).getByRole('alert')).toHaveText('Enter a public repository as owner/name.');
     await expect(page.getByRole('region', { name: 'Workflow summary' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /^Inspect run/ })).toHaveCount(0);
   });
@@ -84,7 +84,7 @@ test.describe('Public GitHub Actions Explorer — synthetic network-only E2E', (
       body: { error: 'GitHub API is unavailable or rate-limited. Retry later.' },
     }));
     await page.goto(explorer);
-    await expect(page.getByRole('alert')).toHaveText(
+    await expect(page.getByRole('region', { name: 'Repository selector' }).getByRole('alert')).toHaveText(
       'GitHub API is unavailable or rate-limited. Retry later.',
     );
     await expect(page.getByRole('region', { name: 'Workflow summary' })).toHaveCount(0);
