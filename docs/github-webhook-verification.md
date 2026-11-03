@@ -273,3 +273,37 @@ SDK client/transport/process restart but **not** in-process live-channel
 reconnection or a real production Firestore outage. SDK/production behavior
 must still be reviewed before activation. The previous guarded 503 test
 continues to cover fail-closed HTTP behavior.
+
+
+## Bounded read-only retention inventory (owner decision input)
+
+`scripts/github-webhook-retention-inventory.mjs` exports the pure
+`analyzeWebhookRetentionSnapshot(records, options)` function. It makes
+**no Firestore read or write, API call, network request or service start**.
+A caller with separate authorization may provide a size-bounded collection
+of already-retrieved records. The function rejects duplicate delivery GUIDs,
+unsupported states, corrupt terminal timestamps, unrecognized retention
+classes, oversized input and invalid forecasting assumptions.
+
+The result includes a state histogram (queued / processing / completed / dead),
+compacted GUID-anchor count, completed records eligible for manual compaction,
+a count of records containing recognized top-level sensitive field names,
+sampled JSON UTF-8 byte totals and an optional **illustrative** 365-day growth
+scenario when a compacted record sample and assumed daily delivery volume
+are supplied. It never returns raw delivery IDs, tokens, payloads or
+record contents. The age threshold defaults to seven days.
+
+**Scope and cost caveats:** serialized JSON UTF-8 bytes are a measurement
+of provided JSON snapshots only. They are **not** Firestore document storage
+billed bytes, index size, document-name overhead, write/read operations,
+monetary pricing or a guarantee that a partial sample represents the full
+collection. The 365-day estimate assumes a constant daily event rate and
+the same mean compacted-document size, and excludes old nonterminal records
+and changes in Firestore overhead. No budget number or plan entitlement is
+implied. `reviewBudgetJsonBytes` is an optional caller-defined
+**review trigger**, never permission to delete or enable TTL.
+
+The existing emulator CI suite tests the report against actual synthetic
+documents read from the local demo Firestore emulator. Those emulator
+documents are cleaned up after the test. This helper is not wired to a
+production data source and does not perform data collection automatically.
