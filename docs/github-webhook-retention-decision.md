@@ -73,3 +73,28 @@ Keeping both the original records and any candidate anchors indefinitely
 is safer for replay protection than deleting history, but it is not a
 storage-cost optimization. This review is informational; no migration
 tool, live caller or Firebase configuration change is enabled.
+
+
+## Rehearsal-specific blockers before any historical migration
+
+A new opt-in primitive, `createWebhookLegacyAnchorBackfill`, can
+create one minimal permanent anchor for a verified legacy outbox GUID,
+with a mandatory authorization callback. The demo Firestore emulator
+validates concurrent calls and unchanged source records.
+
+- [ ] Enumerate and reconcile **all** historical GUIDs with authorized,
+      independently reviewed completeness evidence; no enumeration tool is
+      enabled or run by this prototype
+- [ ] Resolve **uppercase/mixed-case historical GUIDs**; the current
+      legacy adapter accepts them but the new dual adapter/backfill
+      prototype intentionally rejects them
+- [ ] Switch and retire every single-collection writer using a
+      separately tested no-race cutover; the emulator explicitly proves
+      the old writer can recreate a work record after synthetic deletion,
+      despite a permanent anchor
+- [ ] Verify cost/quota impact and get owner approval before any live
+      backfill or changes to data retention
+
+**Release is blocked** until every item above and the existing owner
+decision gates are reviewed. In particular, an emulator success is not
+a declaration of collection-wide production migration.
