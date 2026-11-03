@@ -60,6 +60,10 @@ A release decision must independently demonstrate: protected secrets and access;
 **No automatic change performed:** no paid hosting/API, npm publish, Github release, live Firebase operation, deployment, TTL, webhook activation, secret export or new production worker. Unverified items are not certified.
 
 
+## 4 November 2026 — report-integrity gate
+
+A fail-closed validator now checks security scan report format, project, timestamps, NVD-source freshness metadata and npm manifest evidence in the manual/scheduled security workflow. **Security scanner execution and immutable Docker runtime are still unverified; neither the issue nor the production gate is complete.**
+
 ## 4 November 2026 — evidence milestone
 
 The [release evidence template](RELEASE_EVIDENCE_TEMPLATE.md) and [synthetic recovery/rollback runbook](SYNTHETIC_OUTAGE_ROLLBACK_RUNBOOK.md) provide a consistent NO-GO-by-default review procedure. Their existence does not mean an owner-approved deployment, a measured production RTO/RPO, or a rollback execution. The separate [security workflow source pin](https://github.com/senanurcetin/Ops-Copilot/pull/110) still leaves a mutable Docker base image.

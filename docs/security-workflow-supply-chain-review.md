@@ -63,3 +63,31 @@ or worker activation is approved by this hardening.
 
 See the [Senior Engineering Readiness Audit](ENGINEERING_READINESS_AUDIT_2026-11-03.md)
 and [open-core commercialization ADR](adr/0001-open-core-commercial-boundary.md).
+
+
+## 4 November 2026 — report evidence integrity gate (source change)
+
+The weekly/manual OWASP security job now calls
+\`node scripts/verify-dependencycheck-report.mjs\` with \`if: always()\`,
+**before** uploading the report artifact. A missing, malformed, oversized,
+stale or wrong-project report fails the security job, while the artifact
+upload remains \`if: always()\` to preserve diagnostic evidence.
+
+The read-only validator requires OWASP JSON report schema 1.x,
+engineVersion, project name \`Ops-Copilot\`, a recent report timestamp,
+a nonempty npm manifest scan result and an NVD CVE Checked timestamp
+declared within 72 hours. It refuses structured scanner exceptions,
+checks that the NVD timestamp is not inconsistent with scan time,
+returns aggregate vulnerability counts only and never prints raw
+dependency paths or advisory payloads.
+
+The validation **does not prove** that the image's vulnerability
+database is actually fresh: the reported NVD timestamp is upstream
+self-reported metadata, and the Docker base image still uses \`:latest\`.
+Nor does this PR assert a real scheduled/manual security run or
+a digest-pinned image. A zero-vulnerability report does not grant
+production approval or prove exhaustive dependency coverage.
+
+Follow-up remains necessary: digest-pin or replace scanner runtime,
+verify actual execution/artifact metadata, review indicated CVEs and
+independently assess database freshness in an owner-approved test.
