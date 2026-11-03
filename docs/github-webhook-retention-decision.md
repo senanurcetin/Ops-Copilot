@@ -125,3 +125,30 @@ enumeration, live project inventory or production migration.
 The emulator test demonstrates why this matters: the old adapter can
 create two independent Firestore documents for GUID strings that
 differ only by letter case. This release blocker remains in force.
+
+
+## Historical GUID conflict triage — not a migration approval
+
+The optional `assessWebhookGuidCaseReconciliation` pure helper
+inspects bounded, caller-supplied *document ID + record* pairs to detect:
+
+- Case-variant duplicates for a single logical GUID
+- Conflicting installation/repository/workflow-run immutable identities
+- Divergent queued/processing/completed/dead lifecycle states
+- Additional work documents that might already have been processed
+  independently
+
+The output provides **counts and fixed risk codes only**. A conflict
+must be investigated manually; a matched payload identity is **not**
+proof that processing had no external effects. No automatic document
+merge, normalization, deletion, backfill or release is permitted by the
+helper. In particular, no live collection inventory has been collected.
+
+- [ ] Establish exact historical source completeness using authorized evidence
+- [ ] Investigate all case-variant identity/lifecycle conflicts with audit evidence
+- [ ] Prove every old ingestion writer and in-flight transaction is retired
+- [ ] Verify canonical key design, quota/cost and replay safety across restarts
+- [ ] Obtain independent owner authorization before any production migration
+
+The default remains no TTL and no deletion. Tests run only offline or
+against synthetic localhost Firebase emulator data.
