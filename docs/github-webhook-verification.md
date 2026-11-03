@@ -165,3 +165,32 @@ Offline tests run under `npm run test:github-app`. Production activation
 still requires an external, separately authorized bounded dispatcher,
 fresh App token provision, queue retention and dead-letter recovery, monitoring,
 and a reviewed security release.
+
+
+## Explicit owner-approved dead-letter recovery
+
+`createWebhookDeadLetterRecovery(adminFirestore, { authorizeRecovery })`
+provides a **manual-only** single-record recovery function. It has no
+listener, scheduler, REST endpoint, token loader or automatic retry trigger.
+The mandatory `authorizeRecovery({deliveryId,operatorId,expectedDeadAtMs})`
+callback MUST verify an authenticated operator and explicit owner approval
+in a separately reviewed server-side admin workflow. Its test fixture
+returning `true` is **not** an implementation of production authorization.
+
+The transaction requires the exact dead-letter event version
+(`expectedDeadAtMs`), verifies the record has no active lease, and
+atomically resets its attempt count to queued **once per delivery GUID**.
+Subsequent or concurrent recovery requests are no-ops; a later exhausted
+record cannot be repeatedly rescued without further reviewed work.
+The same document and GUID remain in place as the replay-deduplication
+anchor. No exception bodies, raw payloads, keys or access tokens are stored.
+
+**Retention policy boundary:** do NOT configure automatic TTL deletion,
+hard-delete, or cleanup of `githubWebhookOutbox/{deliveryId}` yet: deletion
+would permit an old signed webhook redelivery to be treated as new. Before a
+future retention change, review the provider's redelivery horizon, incident
+audit horizon, storage limits, and an independent tombstone/deduplication
+strategy. No retention policy or cloud configuration was activated here.
+
+Offline recovery tests run via `npm run test:github-app`; the existing
+localhost emulator CI job adds a 12-way, two-client recovery race.

@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestore-outbox.mjs';
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
+import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
 import { enqueueAuthorizedGitHubDelivery } from '../scripts/github-webhook-gate.mjs';
 import { createGitHubWebhookRequestHandler } from '../scripts/github-webhook-http.mjs';
 
@@ -220,6 +221,49 @@ test('two Admin Firestore clients grant only one concurrent worker lease and ter
     assert.equal(successful, true);
     assert.equal((await ref.get()).data().state, 'completed');
     assert.equal(await workers[1].claim(deliveryId, 'worker-new'), null);
+  } finally {
+    await ref.delete();
+    await Promise.all([closeAdmin(a), closeAdmin(b)]);
+  }
+});
+
+
+test('owner-approved dead-letter recovery is transactional across two Admin Firestore clients', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const deliveryId = randomUUID();
+  const ref = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  const deadAtMs = 10000;
+  try {
+    await ref.set({
+      deliveryId, state: 'dead', attempts: 5, deadAtMs,
+      event: 'workflow_run', action: 'completed',
+      installationId: 11, repositoryId: 42,
+      repository: 'example/private-repo', workflowRunId: 765,
+      leaseOwner: null, leaseToken: null, leaseUntilMs: 0,
+      failureCode: 'ATTEMPTS_EXHAUSTED',
+    });
+    const reviewers = [
+      createWebhookDeadLetterRecovery(a.db, {
+        authorizeRecovery: async () => true, nowMs: () => 30000,
+      }),
+      createWebhookDeadLetterRecovery(b.db, {
+        authorizeRecovery: async () => true, nowMs: () => 30000,
+      }),
+    ];
+    const requests = Array.from({length: 12}, (_, i) =>
+      reviewers[i % 2]({deliveryId, operatorId: 'owner-reviewer', expectedDeadAtMs: deadAtMs}));
+    const results = await Promise.all(requests);
+    assert.equal(results.filter(r => r.status === 'requeued').length, 1);
+    assert.equal(results.filter(r => r.status === 'not_dead').length, 11);
+    const updated = (await ref.get()).data();
+    assert.equal(updated.state, 'queued');
+    assert.equal(updated.attempts, 0);
+    assert.equal(updated.recoveryCount, 1);
+    assert.equal(updated.deliveryId, deliveryId);
+    assert.equal(updated.workflowRunId, 765);
+    assert.equal(updated.leaseToken, null);
   } finally {
     await ref.delete();
     await Promise.all([closeAdmin(a), closeAdmin(b)]);
