@@ -110,3 +110,30 @@ denying direct browser reads/writes of the admin-only outbox collection.
 claim/lease state transitions, bounded retries, poison/dead-letter policy,
 retention, production secret provisioning and end-to-end operations
 remain separate gates. No service is started by importing these modules.
+
+
+## Optional transactional outbox worker state machine
+
+`createWebhookOutboxWorker(adminFirestore)` is a server-only library factory,
+not a daemon. It makes no GitHub API request and never starts a worker. A caller
+may explicitly `claim(deliveryId, workerId)`, then `complete` or `fail`
+the returned lease, using Firestore transactions to resolve multiple worker
+claims. Each claim has a fresh opaque token and a bounded lease; stale owners
+cannot acknowledge newer claims.
+
+Defaults: 60-second lease, maximum five attempts, exponential retry starting
+at five seconds and capped at 15 minutes. Exhaustion moves the record to
+`dead`; errors are stored as coarse codes, never exception texts, tokens or
+webhook payloads. The queue document remains the replay-deduplication anchor
+until a separately reviewed retention policy is implemented. Workers must use
+read-only GitHub API permissions and an idempotent processor; a lease alone
+cannot guarantee exactly-once external effects. Clock synchronization and
+lease expiry during slow processing require release review.
+
+Offline unit coverage is imported by `npm run test:github-app`. The existing
+localhost emulator CI command additionally runs a two-client, 20-way claim
+race and terminal completion test. Neither test launches a background worker.
+
+```bash
+node --test tests/github-webhook-outbox-worker.test.mjs
+```
