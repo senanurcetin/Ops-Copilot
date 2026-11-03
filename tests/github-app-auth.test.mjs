@@ -1,3 +1,4 @@
+import './github-webhook-verify.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, createVerify } from 'node:crypto';
