@@ -242,3 +242,34 @@ emulators do not fully reproduce production transaction semantics.
 
 No listener, background worker, cloud service, TTL policy or live
 endpoint is activated by either library.
+
+
+## Admin SDK transport cut + restart evidence
+
+The extra localhost-only test
+`tests/github-webhook-admin-outage.emulator.test.mjs` starts a **temporary,
+isolated TCP proxy** on an ephemeral loopback port, pointing to the existing
+Firestore emulator on 127.0.0.1:8080. It spawns a **separate Node process
+running the real Firebase Admin SDK**, with that child process's
+`FIRESTORE_EMULATOR_HOST` set to the proxy. This verifies that:
+
+1. The real Admin client commits a synthetic outbox delivery through the proxy.
+2. While the proxy is disconnected and its connections are destroyed, a new
+   child using the Admin SDK receives no successful acknowledgment.
+3. That isolated child is forcibly terminated to model process loss mid-flight.
+4. After reconnecting the proxy, a fresh Admin SDK process can safely redeliver
+   the same GUID and always observes the second redelivery as a duplicate.
+   The emulator contains a single durable document at the original GUID.
+
+The test refuses to run outside exact local demo emulator settings. It never
+stops the shared emulator, changes production environment variables, uses a
+real GitHub token, or enables a listener beyond the temporary test proxy.
+
+**Interpretation:** a lost acknowledgment is not proof that Firestore did not
+commit; it might have committed before the transport was cut. The correct
+invariant is that reconnecting and redelivering cannot create a second
+delivery document or duplicate queued work. This test exercises a real Admin
+SDK client/transport/process restart but **not** in-process live-channel
+reconnection or a real production Firestore outage. SDK/production behavior
+must still be reviewed before activation. The previous guarded 503 test
+continues to cover fail-closed HTTP behavior.
