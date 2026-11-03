@@ -1,3 +1,4 @@
+import './github-webhook-gate.test.mjs';
 import './github-webhook-verify.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
