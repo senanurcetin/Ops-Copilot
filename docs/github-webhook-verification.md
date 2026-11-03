@@ -194,3 +194,51 @@ strategy. No retention policy or cloud configuration was activated here.
 
 Offline recovery tests run via `npm run test:github-app`; the existing
 localhost emulator CI job adds a 12-way, two-client recovery race.
+
+
+## Retention without deleting replay protection
+
+The optional server-only `createWebhookOutboxCompactor(adminFirestore,
+{authorizeCompaction})` module allows an explicitly approved operator to
+**compact only terminal, completed records** after at least seven days
+(configurable no lower than one day). It atomically rewrites the **same**
+`githubWebhookOutbox/{deliveryId}` document to a minimal completed record
+retaining its delivery GUID, installation/repository/workflow identity,
+attempt count, completion timestamp and compaction audit metadata.
+Transient lease, retry and error fields are omitted. Dead-letter,
+in-progress, missing, newly completed, stale-version and actively leased
+records are never compacted. Concurrent requests can compact at most once.
+
+Critically, this is an **in-place deduplication tombstone**, not a deletion:
+the original Firestore document and GUID remain indefinitely. The existing
+`enqueueOnce` adapter still returns `false` for a redelivered GUID;
+workers will not claim completed tombstones. Neither automatic TTL nor
+hard deletion is configured. Compaction must be initiated manually by a
+trusted caller that authenticates the operator and verifies owner approval.
+`authorizeCompaction: async () => true` in tests is **not** production
+authorization.
+
+The isolated emulator CI suite verifies 12 concurrent compactions across
+two real Admin Firestore clients, redelivery deduplication after
+compaction, and worker refusal to reclaim a completed tombstone.
+
+## Transport-disconnection simulation boundary
+
+The emulator CI suite also runs a controlled **localhost TCP proxy
+disconnection** test. The proxy forwards an HTTP probe to the Firestore
+emulator, is deliberately severed, and then reconnected. A deliberately
+guarded persistence callback reports the transport loss to the existing
+HTTP handler, which must return HTTP 503 without queuing, followed by 202
+on recovery and 200 on replay.
+
+**Evidence boundary:** this is a transport-level outage injection in the
+emulator test; the Firestore Admin SDK client in the fixture continues to
+use the normal 127.0.0.1:8080 endpoint. It does NOT demonstrate that the
+Admin SDK itself terminates all in-flight operations or automatically
+reconnects correctly after a real Firestore outage. The full end-to-end
+Admin SDK disconnect/recovery and production release remain unapproved
+and should be tested in a separate controlled environment. Firestore
+emulators do not fully reproduce production transaction semantics.
+
+No listener, background worker, cloud service, TTL policy or live
+endpoint is activated by either library.

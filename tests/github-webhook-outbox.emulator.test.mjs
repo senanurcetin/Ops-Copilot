@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, createHmac } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { createServer, connect } from 'node:net';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp as initializeClientApp, deleteApp as deleteClientApp } from 'firebase/app';
@@ -12,6 +13,7 @@ import {
 import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestore-outbox.mjs';
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
+import { createWebhookOutboxCompactor } from '../scripts/github-webhook-outbox-retention.mjs';
 import { enqueueAuthorizedGitHubDelivery } from '../scripts/github-webhook-gate.mjs';
 import { createGitHubWebhookRequestHandler } from '../scripts/github-webhook-http.mjs';
 
@@ -267,5 +269,139 @@ test('owner-approved dead-letter recovery is transactional across two Admin Fire
   } finally {
     await ref.delete();
     await Promise.all([closeAdmin(a), closeAdmin(b)]);
+  }
+});
+
+
+test('terminal record compaction retains GUID and prevents new enqueue after reconnect', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const deliveryId = randomUUID();
+  const ref = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  const now = Date.now();
+  const completedAtMs = now - 9 * 86400000;
+  try {
+    await ref.set({
+      deliveryId, event: 'workflow_run', action: 'completed',
+      installationId: 11, repositoryId: 42, repository: 'example/private-repo',
+      workflowRunId: 765, state: 'completed', attempts: 3,
+      enqueuedAtMs: completedAtMs - 3000, completedAtMs,
+      leaseOwner: null, leaseToken: null, leaseUntilMs: 0,
+      failureCode: 'OLD_FAILURE', transientField: 'remove-me',
+    });
+    const compactors = [createWebhookOutboxCompactor(a.db, {
+      authorizeCompaction: async () => true, nowMs: () => now,
+    }), createWebhookOutboxCompactor(b.db, {
+      authorizeCompaction: async () => true, nowMs: () => now,
+    })];
+    const outcomes = await Promise.all(Array.from({length: 12}, (_, index) =>
+      compactors[index % 2]({
+        deliveryId, operatorId: 'owner-reviewer', expectedCompletedAtMs: completedAtMs,
+      })));
+    assert.equal(outcomes.filter(o => o.status === 'compacted').length, 1);
+    assert.equal(outcomes.filter(o => o.status === 'already_compacted').length, 11);
+    const record = (await ref.get()).data();
+    assert.equal(record.retentionClass, 'dedup_anchor_v1');
+    assert.equal(record.failureCode, undefined);
+    assert.equal(record.transientField, undefined);
+    assert.equal(record.state, 'completed');
+    assert.equal(record.deliveryId, deliveryId);
+    // The existing outbox adapter checks the same GUID path transactionally.
+    const again = await createFirestoreWebhookOutbox(b.db)({
+      deliveryId, event: 'workflow_run', action: 'completed',
+      installationId: 11, repositoryId: 42,
+      repository: 'example/private-repo', workflowRunId: 765,
+    });
+    assert.equal(again, false);
+    assert.equal(await createWebhookOutboxWorker(b.db).claim(deliveryId, 'worker-new'), null);
+  } finally {
+    await ref.delete();
+    await Promise.all([closeAdmin(a), closeAdmin(b)]);
+  }
+});
+
+test('isolated localhost Firestore transport outage returns 503 and recovery deduplicates', async () => {
+  assertLocalOnly();
+  const admin = newAdmin();
+  const deliveryId = randomUUID();
+  const ref = admin.db.doc('githubWebhookOutbox/' + deliveryId);
+  const raw = makeDelivery(deliveryId);
+  let online = true;
+  const sockets = new Set();
+  const server = createServer(client => {
+    sockets.add(client);
+    client.on('error', () => {});
+    client.on('close', () => sockets.delete(client));
+    if (!online) { client.destroy(); return; }
+    const upstream = connect(8080, '127.0.0.1');
+    sockets.add(upstream);
+    upstream.on('error', () => client.destroy());
+    upstream.on('close', () => {sockets.delete(upstream); client.destroy();});
+    client.on('close', () => upstream.destroy());
+    client.pipe(upstream).pipe(client);
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const address = server.address();
+    assert.ok(address && typeof address === 'object');
+    const probe = () => fetch(
+      'http://127.0.0.1:' + address.port +
+      '/v1/projects/demo-nexus-ops-isolation/databases/(default)/documents',
+      {signal: AbortSignal.timeout(2500)},
+    );
+    const enqueueReal = createFirestoreWebhookOutbox(admin.db);
+    const enqueueGuarded = async work => {
+      // Failure injection through a *separate localhost TCP transport proxy*.
+      // The normal Admin client still targets the original 8080 emulator.
+      // Do not represent this check as proof of Admin SDK failover behavior.
+      try {
+        const response = await probe();
+        await response.arrayBuffer();
+      } catch {
+        throw new Error('injected-emulator-transport-offline');
+      }
+      return enqueueReal(work);
+    };
+    const handle = createGitHubWebhookRequestHandler({...CONFIG, enqueueOnce: enqueueGuarded});
+    async function invoke() {
+      const request = Readable.from([raw.rawBody]);
+      request.url = '/github/webhook';
+      request.method = 'POST';
+      request.headers = raw.headers;
+      const res = {
+        statusCode: null, body: null,
+        writeHead(code) {this.statusCode = code;},
+        end(body) {this.body = JSON.parse(body);},
+      };
+      await handle(request, res);
+      return res;
+    }
+
+    const onlineProbe = await probe();
+    await onlineProbe.arrayBuffer();
+    online = false;
+    for (const socket of sockets) socket.destroy();
+    const outage = await invoke();
+    assert.equal(outage.statusCode, 503);
+    assert.deepEqual(outage.body, {status: 'temporarily_unavailable'});
+    assert.equal((await ref.get()).exists, false);
+
+    online = true;
+    const recovered = await invoke();
+    assert.equal(recovered.statusCode, 202);
+    assert.equal((await ref.get()).exists, true);
+    const replay = await invoke();
+    assert.equal(replay.statusCode, 200);
+    assert.deepEqual(replay.body, {status:'duplicate'});
+  } finally {
+    online = false;
+    for (const socket of sockets) socket.destroy();
+    await new Promise(resolve => server.close(() => resolve()));
+    await ref.delete();
+    await closeAdmin(admin);
   }
 });
