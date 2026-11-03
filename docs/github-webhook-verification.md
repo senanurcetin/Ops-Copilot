@@ -45,3 +45,14 @@ node --test tests/github-webhook-verify.test.mjs tests/github-webhook-gate.test.
 ```
 
 Additional reference: https://docs.github.com/en/webhooks/using-webhooks/best-practices-for-using-webhooks
+
+
+## Optional Firestore outbox adapter (not active by default)
+
+The server-only `createFirestoreWebhookOutbox(adminFirestore)` factory in `scripts/github-webhook-firestore-outbox.mjs` creates an `enqueueOnce` callback for the signed delivery gate. It uses an atomic Firestore transaction: read the document at `githubWebhookOutbox/{deliveryId}`, then create one queued record if the GUID does not exist. A duplicate returns false. The same document is the **outbox work item**, so there is no separate non-atomic queue write. No Firebase SDK import, app initialization, network request, service startup or cloud resource is introduced by importing this module.
+
+The caller must inject an already-authorized **Admin SDK** Firestore client, keep that client server-side, and implement a separate idempotent outbox worker. Test with the Firestore emulator before any live deployment. Offline fakes test the adapter contract but do not substitute for actual emulator/production concurrency tests. No webhook HTTP receiver, database connection, worker or production installation was activated.
+
+```bash
+node --test tests/github-webhook-firestore-outbox.test.mjs
+```
