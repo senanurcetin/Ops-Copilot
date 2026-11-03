@@ -135,15 +135,25 @@ test('authorization and event allowlist reject before any Firestore document wri
   }
 });
 
-test('a terminated Firestore client cannot be acknowledged as accepted by HTTP handler', async () => {
+test('rolled-back Firestore emulator transaction returns HTTP 503 without persisting work', async () => {
   assertLocalOnly();
   const a = newAdmin();
-  const b = newAdmin();
   const deliveryId = randomUUID();
   const { rawBody, headers } = makeDelivery(deliveryId);
+  let attemptedWrites = 0;
   try {
-    await a.db.terminate();
-    const enqueueOnce = createFirestoreWebhookOutbox(a.db);
+    // Execute a real emulator transaction with a read + staged create, but
+    // reject before commit. This tests rollback without triggering an SDK
+    // internal unhandled rejection from using a terminated client.
+    const rollbackDatabase = {
+      collection: name => a.db.collection(name),
+      runTransaction: callback => a.db.runTransaction(async transaction => {
+        await callback(transaction);
+        attemptedWrites += 1;
+        throw new Error('synthetic-emulator-transaction-rollback');
+      }),
+    };
+    const enqueueOnce = createFirestoreWebhookOutbox(rollbackDatabase);
     const handler = createGitHubWebhookRequestHandler({ ...CONFIG, enqueueOnce });
     const request = Readable.from([rawBody]);
     request.method = 'POST';
@@ -155,11 +165,12 @@ test('a terminated Firestore client cannot be acknowledged as accepted by HTTP h
       end(value) { this.data = JSON.parse(value); },
     };
     await handler(request, response);
+    assert.equal(attemptedWrites, 1);
     assert.equal(response.statusCode, 503);
     assert.deepEqual(response.data, { status: 'temporarily_unavailable' });
-    assert.equal((await b.db.doc('githubWebhookOutbox/' + deliveryId).get()).exists, false);
+    assert.equal((await a.db.doc('githubWebhookOutbox/' + deliveryId).get()).exists, false);
   } finally {
-    await Promise.allSettled([closeAdmin(a), closeAdmin(b)]);
+    await closeAdmin(a);
   }
 });
 

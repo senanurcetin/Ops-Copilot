@@ -103,7 +103,7 @@ GitHub Actions `firestore-isolation` job runs this suite with
 It checks 24 simultaneous signed deliveries across two Admin Firestore
 clients (one queued, all others duplicates), persistence observed from a
 new client, fail-closed installation/repository and event filtering,
-no HTTP 202 on a terminated database client, and Firestore rules
+HTTP 503 after a deliberately rolled-back real emulator transaction (no HTTP 202 and no record), and Firestore rules
 denying direct browser reads/writes of the admin-only outbox collection.
 
 **Boundary:** emulator evidence is not live deployment approval. Worker
