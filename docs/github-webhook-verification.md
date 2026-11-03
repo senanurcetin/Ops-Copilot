@@ -137,3 +137,31 @@ race and terminal completion test. Neither test launches a background worker.
 ```bash
 node --test tests/github-webhook-outbox-worker.test.mjs
 ```
+
+
+## Opt-in read-only GitHub API consumer
+
+`scripts/github-webhook-readonly-consumer.mjs` provides an explicit,
+one-delivery-at-a-time read-only processor; importing it **does not start a
+daemon**, poll a queue, initialize Firebase or call GitHub. The caller injects
+the existing Firestore-backed `claim/complete/fail` worker and a trusted
+`getToken()` callback that supplies a short-lived, repository-scoped GitHub
+App installation token with `Actions: read` permission.
+
+The processor obtains a lease before requesting a token. It makes only
+`GET https://api.github.com/repos/OWNER/REPO/actions/runs/RUN_ID` with a
+hardcoded API host, disabled redirects, and a bounded timeout. Responses must
+match the claimed numeric run ID, repository ID and exact `owner/name`, and
+must be in a completed state. It returns only the run ID and conclusion; it
+never persists the raw GitHub API payload, token, headers, or exceptions.
+
+A successful read is marked complete only after the lease holder commits
+`complete`. A failed fetch/token lookup schedules retry/dead-letter through
+the existing worker; stale claims cannot be acknowledged. This is **not**
+an always-running worker, a webhook endpoint, a production deployment or
+exactly-once execution guarantee.
+
+Offline tests run under `npm run test:github-app`. Production activation
+still requires an external, separately authorized bounded dispatcher,
+fresh App token provision, queue retention and dead-letter recovery, monitoring,
+and a reviewed security release.
