@@ -1,5 +1,7 @@
 # Ops-Copilot — Document-Grounded Industrial AI Assistant
 
+> **Senior engineering readiness (3 November 2026):** [evidence-backed audit and phased action plan](docs/ENGINEERING_READINESS_AUDIT_2026-11-03.md) · [open-core and commercialization decision](docs/adr/0001-open-core-commercial-boundary.md). Passing CI alone is not production certification.
+
 > **Reviewer map · 2 November 2026:** This repository has two **separate** lines of work: [industrial troubleshooting/RAG and SECOM research](docs/case-study.md) and a [read-only GitHub Actions REST auditor](docs/github-actions-integration.md) with [public API demonstration evidence](docs/github-api-live-demo.md). Review [local setup](#local-setup), [quality checks](#quality-checks) and [operational limits](#scope-and-operational-boundaries) before interpreting screenshots or integration claims.
 >
 > **Do not infer:** the public sign-in screenshot is **not** an authenticated operator session; document-grounded advice is not certified industrial safety guidance; the GitHub auditor's data and tests do not constitute a GitHub partnership or developer-program acceptance.
