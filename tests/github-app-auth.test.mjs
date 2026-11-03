@@ -1,3 +1,4 @@
+import './github-webhook-retention-inventory.test.mjs';
 import './github-webhook-outbox-retention.test.mjs';
 import './github-webhook-deadletter-recovery.test.mjs';
 import './github-webhook-readonly-consumer.test.mjs';

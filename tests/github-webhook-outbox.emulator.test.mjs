@@ -14,6 +14,7 @@ import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestor
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
 import { createWebhookOutboxCompactor } from '../scripts/github-webhook-outbox-retention.mjs';
+import { analyzeWebhookRetentionSnapshot } from '../scripts/github-webhook-retention-inventory.mjs';
 import { enqueueAuthorizedGitHubDelivery } from '../scripts/github-webhook-gate.mjs';
 import { createGitHubWebhookRequestHandler } from '../scripts/github-webhook-http.mjs';
 
@@ -403,5 +404,48 @@ test('isolated localhost Firestore transport outage returns 503 and recovery ded
     await new Promise(resolve => server.close(() => resolve()));
     await ref.delete();
     await closeAdmin(admin);
+  }
+});
+
+
+test('read-only inventory measures emulator documents without leaking delivery IDs', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const deliveryIds = [randomUUID(), randomUUID(), randomUUID()];
+  const refs = deliveryIds.map(id => a.db.doc('githubWebhookOutbox/' + id));
+  const nowMs = 21 * 86400000;
+  const base = id => ({
+    deliveryId: id, event: 'workflow_run', action: 'completed',
+    installationId: 11, repositoryId: 42,
+    repository: 'example/private-repo', workflowRunId: 765,
+    enqueuedAtMs: 86400000, attempts: 1,
+  });
+  try {
+    await Promise.all([
+      refs[0].set({...base(deliveryIds[0]),state:'queued'}),
+      refs[1].set({...base(deliveryIds[1]),state:'dead',deadAtMs:12*86400000}),
+      refs[2].set({...base(deliveryIds[2]),state:'completed',
+        completedAtMs:8*86400000,retentionClass:'dedup_anchor_v1'}),
+    ]);
+    const stored = await Promise.all(refs.map(ref => ref.get()));
+    assert.equal(stored.every(snapshot => snapshot.exists), true);
+    const report = analyzeWebhookRetentionSnapshot(
+      stored.map(snapshot => snapshot.data()),
+      {nowMs,expectedDailyDeliveries:25,reviewBudgetJsonBytes:1},
+    );
+    assert.deepEqual(report.byState,{queued:1,processing:0,completed:1,dead:1});
+    assert.equal(report.compactedCount,1);
+    assert.equal(report.eligibleCompletedCount,0);
+    assert.equal(report.thresholdExceeded,true);
+    assert.equal(report.safePolicy.deleteDocuments,false);
+    assert.equal(report.safePolicy.enableFirestoreTtl,false);
+    assert.ok(report.predictedNewJsonBytesPerDay > 0);
+    for (const id of deliveryIds) {
+      assert.equal(JSON.stringify(report).includes(id),false);
+    }
+    assert.equal((await Promise.all(refs.map(ref => ref.get()))).every(s=>s.exists),true);
+  } finally {
+    await Promise.allSettled(refs.map(ref => ref.delete()));
+    await closeAdmin(a);
   }
 });
