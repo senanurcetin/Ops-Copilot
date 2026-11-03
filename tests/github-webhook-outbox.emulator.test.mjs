@@ -14,6 +14,7 @@ import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestor
 import { createDualAnchorWebhookOutbox } from '../scripts/github-webhook-dual-anchor-outbox.mjs';
 import { createWebhookLegacyAnchorBackfill } from '../scripts/github-webhook-legacy-anchor-backfill.mjs';
 import { assessWebhookCutoverSnapshot } from '../scripts/github-webhook-cutover-preflight.mjs';
+import { assessWebhookGuidCaseReconciliation } from '../scripts/github-webhook-case-reconciliation.mjs';
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
 import { createWebhookOutboxCompactor } from '../scripts/github-webhook-outbox-retention.mjs';
@@ -713,5 +714,87 @@ test('all dual-anchor synthetic emulator records can pass preflight, not authori
   } finally {
     await Promise.allSettled([...workRefs, ...anchorRefs].map(ref => ref.delete()));
     await Promise.all([closeAdmin(a), closeAdmin(b)]);
+  }
+});
+
+
+test('reconciliation flags conflicting immutable metadata for case-variant real emulator work', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const lowerId = randomUUID();
+  const upperId = lowerId.toUpperCase();
+  const lowerRef = a.db.doc('githubWebhookOutbox/' + lowerId);
+  const upperRef = a.db.doc('githubWebhookOutbox/' + upperId);
+  const work = (deliveryId, workflowRunId) => ({
+    deliveryId, event:'workflow_run', action:'completed',
+    installationId:11, repositoryId:42,
+    repository:'example/private-repo', workflowRunId,
+  });
+  try {
+    assert.equal(await createFirestoreWebhookOutbox(a.db)(work(lowerId,765)), true);
+    assert.equal(await createFirestoreWebhookOutbox(b.db)(work(upperId,766)), true);
+    await upperRef.update({state:'processing'});
+    const snapshots = await Promise.all([lowerRef.get(),upperRef.get()]);
+    assert.equal(snapshots.every(doc => doc.exists),true);
+    const report = assessWebhookGuidCaseReconciliation({
+      documents:snapshots.map(doc => ({
+        documentId:doc.id,data:doc.data(),
+      })),
+      historicalScopeAttested:true,
+    });
+    assert.equal(report.logicalGuidCount,1);
+    assert.equal(report.caseVariantGroups,1);
+    assert.equal(report.potentialExtraWorkDocuments,1);
+    assert.equal(report.conflictingIdentityGroups,1);
+    assert.equal(report.divergentLifecycleGroups,1);
+    assert.equal(report.inFlightCollisionGroups,1);
+    assert.equal(report.recommendedHandling,'manual-investigation-no-automatic-collapse');
+    assert.equal(report.productionMigrationAuthorized,false);
+    assert.equal(report.ttlAllowed,false);
+    assert.equal(JSON.stringify(report).includes(lowerId),false);
+    assert.equal(JSON.stringify(report).includes(upperId),false);
+    assert.equal((await lowerRef.get()).exists,true);
+    assert.equal((await upperRef.get()).exists,true);
+  } finally {
+    await Promise.allSettled([lowerRef.delete(),upperRef.delete()]);
+    await Promise.all([closeAdmin(a),closeAdmin(b)]);
+  }
+});
+
+test('even matching case-variant emulator metadata cannot authorize auto-merging work', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const lowerId = randomUUID();
+  const upperId = lowerId.toUpperCase();
+  const refs = [
+    a.db.doc('githubWebhookOutbox/' + lowerId),
+    a.db.doc('githubWebhookOutbox/' + upperId),
+  ];
+  const work = deliveryId => ({
+    deliveryId,event:'workflow_run',action:'completed',
+    installationId:11,repositoryId:42,
+    repository:'example/private-repo',workflowRunId:765,
+  });
+  try {
+    assert.equal(await createFirestoreWebhookOutbox(a.db)(work(lowerId)),true);
+    assert.equal(await createFirestoreWebhookOutbox(b.db)(work(upperId)),true);
+    const docs=await Promise.all(refs.map(ref=>ref.get()));
+    const report=assessWebhookGuidCaseReconciliation({
+      documents:docs.map(doc=>({documentId:doc.id,data:doc.data()})),
+      historicalScopeAttested:true,
+    });
+    assert.equal(report.caseVariantGroups,1);
+    assert.equal(report.conflictingIdentityGroups,0);
+    assert.equal(report.divergentLifecycleGroups,0);
+    assert.equal(report.observedSampleConsistent,false);
+    assert.equal(report.productionMigrationAuthorized,false);
+    assert.equal(report.deleteAllowed,false);
+    assert.equal((await Promise.all(refs.map(ref=>ref.get())))
+      .every(doc=>doc.exists),true);
+  } finally {
+    await Promise.allSettled(refs.map(ref=>ref.delete()));
+    await Promise.all([closeAdmin(a),closeAdmin(b)]);
   }
 });

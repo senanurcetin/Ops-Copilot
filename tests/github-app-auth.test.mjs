@@ -1,3 +1,4 @@
+import './github-webhook-case-reconciliation.test.mjs';
 import './github-webhook-cutover-preflight.test.mjs';
 import './github-webhook-legacy-anchor-backfill.test.mjs';
 import './github-webhook-dual-anchor-outbox.test.mjs';

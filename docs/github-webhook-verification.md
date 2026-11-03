@@ -453,3 +453,35 @@ been verified against a production Firestore project. The audit cannot
 detect records never supplied in its arrays, in-flight clients, or other
 services using the old adapter. Any path to migration/TTL must establish
 these independently and separately obtain owner approval.
+
+
+## Historical GUID case reconciliation — identity and lifecycle evidence
+
+`assessWebhookGuidCaseReconciliation({documents,
+historicalScopeAttested})` is a **pure, bounded, offline-only** reader
+of *caller-supplied* `{documentId, data}` legacy outbox samples.
+It never queries Firestore, enumerates records, initializes the Admin SDK
+or changes queue state. Every document ID must exactly match its
+stored `deliveryId`, and immutable scope metadata must be valid.
+
+The report groups hexadecimal case variants of the **same logical GUID**
+but retains each exact Firestore document identity. It counts logical
+GUID groups, extra work documents, conflicting immutable
+installation/repository/workflow identities, divergent lifecycle states,
+and collisions that include queued/processing work. It returns **only
+aggregate counts and fixed risk codes**: never GUIDs, repository
+identifiers, original records or payloads.
+
+Emulator CI uses real legacy adapter transactions to create (a) two
+case-variant documents with **conflicting workflow IDs and divergent
+states**, and (b) two case-variant documents with matching immutable
+metadata. Both outcomes require investigation. Even matching identities
+cannot establish exactly-once external processing or authorize
+silently merging/deleting one document.
+
+The result always sets `productionMigrationAuthorized`,
+`releaseAuthorized`, `ttlAllowed`, and `deleteAllowed` to
+`false`. Caller-provided history completeness is **not** independently
+verified. This is a preliminary reconciliation assessment, not a
+collection-wide migration or owner approval. The existing single-path
+adapter and all production data remain unchanged.
