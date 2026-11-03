@@ -1,3 +1,4 @@
+import './github-webhook-http.test.mjs';
 import './github-webhook-firestore-outbox.test.mjs';
 import './github-webhook-gate.test.mjs';
 import './github-webhook-verify.test.mjs';

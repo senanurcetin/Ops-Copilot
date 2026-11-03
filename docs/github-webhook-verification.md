@@ -56,3 +56,35 @@ The caller must inject an already-authorized **Admin SDK** Firestore client, kee
 ```bash
 node --test tests/github-webhook-firestore-outbox.test.mjs
 ```
+
+
+## Optional HTTP receiver (disabled by default)
+
+The Node.js `createGitHubWebhookRequestHandler(...)` factory in
+`scripts/github-webhook-http.mjs` provides a **handler only**. It does not start
+a listener, create a Next.js route, activate a GitHub App, deploy a worker, or
+connect to Firebase. A trusted server can inject an authenticated Firestore
+Admin client and the transactional outbox adapter separately.
+
+The handler accepts only `POST /github/webhook` with JSON content type.
+It bounds raw bytes while receiving the request (1 MiB default), verifies
+the GitHub HMAC signature, installation and repository IDs, and allows only
+`workflow_run.completed`. The handler replies with 202 **after** an outbox
+write, 200 for duplicates/ignored actions, 401 for invalid signatures, 403
+for unauthorized installation/repository, 400/413 for malformed or oversized
+requests, and 503 when persistence fails. No sensitive payload or exception
+is returned in the response.
+
+**Production release gates:** use a TLS-terminating server with connection,
+header and request-timeout limits; run behind authenticated GitHub App webhook
+configuration; avoid proxies that rewrite signed bodies; verify the Admin SDK
+Firestore transaction behavior with the emulator; implement a separately
+authorized and idempotent read-only outbox worker; define queue retention,
+dead-letter recovery, and observability without logging secrets. Do not
+interpret successful offline tests as end-to-end production validation.
+
+Offline focused verification:
+
+```bash
+node --test tests/github-webhook-http.test.mjs
+```
