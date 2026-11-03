@@ -1,4 +1,4 @@
-const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MODES = new Set(['legacy', 'dual_anchor', 'unknown']);
 const MAX_IDS = 10000;
 const MAX_WRITERS = 100;
