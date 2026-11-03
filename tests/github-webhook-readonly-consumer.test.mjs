@@ -47,7 +47,9 @@ test('rejects invalid work and server configuration before network access', asyn
   for (const altered of [
     {workflowRunId: '765'}, {workflowRunId: 0},
     {repositoryId: '42'}, {repository: 'another/repo'},
-    {repository: 'bad/path/extra'}, {event: 'repository_dispatch'},
+    {repository: 'bad/path/extra'}, {repository: '../repo'},
+    {repository: './repo'}, {repository: 'owner/..'},
+    {repository: 'owner/.'}, {event: 'repository_dispatch'},
     {action: 'requested'}, {installationId: 0},
   ]) {
     // A different valid owner/repo is allowed in isolation, because the

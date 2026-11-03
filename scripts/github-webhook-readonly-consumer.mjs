@@ -24,6 +24,9 @@ export async function inspectAuthorizedWorkflowRun({
     throw new Error('Invalid read-only GitHub consumer configuration.');
   }
   const [owner, name] = work.repository.split('/');
+  if (owner === '.' || owner === '..' || name === '.' || name === '..') {
+    throw new Error('Invalid authorized workflow work item.');
+  }
   const url = 'https://api.github.com/repos/' + owner + '/' + name +
     '/actions/runs/' + work.workflowRunId;
 
