@@ -307,3 +307,42 @@ The existing emulator CI suite tests the report against actual synthetic
 documents read from the local demo Firestore emulator. Those emulator
 documents are cleaned up after the test. This helper is not wired to a
 production data source and does not perform data collection automatically.
+
+
+## Explicit local retention report (no cloud connection)
+
+The optional CLI `npm run report:github-webhook-retention -- --file
+LOCAL_SNAPSHOT.json --daily 100 --review-bytes 1000000` reads only the
+local JSON array explicitly supplied with `--file`. It does **not**
+initialize Firebase, authenticate to GitHub, enumerate production records,
+access billing APIs, start a service, or modify a document.
+
+It delegates to the existing pure `analyzeWebhookRetentionSnapshot`
+function, emits **aggregate JSON only**, and never displays the local file
+path, delivery GUIDs or source payload values. Files are bounded to
+6 MiB, optional sample record counts default to at most 10,000, and
+symlink/nonregular inputs are rejected on supported platforms. Errors
+are intentionally generic. A local input file may itself contain sensitive
+material: restrict its file permissions and do not commit it to Git.
+
+`--daily` is a user-supplied nonnegative integer assumption, **not**
+an observed event rate. `--review-bytes` is a locally chosen aggregate
+JSON-byte alert threshold, **not** a cloud spend cap or deletion order.
+Outputs remain sample-only; no billed Firestore document/index sizes or
+current prices are measured. A missing or malformed input fails closed.
+
+### Firestore TTL billing and replay boundaries
+
+The official [Firebase Firestore pricing documentation](https://firebase.google.com/docs/firestore/pricing)
+states that **TTL deletions are not included in free usage and require
+billing to be enabled**. Google Cloud's
+[Firestore TTL documentation](https://docs.cloud.google.com/firestore/native/docs/ttl)
+states that expired records are deleted asynchronously and that TTL
+deletion is not transactional. Therefore enabling TTL on the GUID
+collection would both violate the current no-paid-services boundary and
+risk converting a valid redelivery into a new queued work item.
+
+**Current safe default:** do not enable TTL, do not delete any known
+delivery GUID and do not start a live listener or worker. Any change
+requires separate owner authorization, production quota evidence and a
+verified durable deduplication migration.
