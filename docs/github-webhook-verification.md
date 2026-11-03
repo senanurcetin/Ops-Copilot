@@ -422,3 +422,34 @@ adapter but are excluded by this rehearsal. Collection-wide coverage,
 mixed-case identity reconciliation, concurrent ingestion cutover,
 authoritative usage and billing review, privacy/retention policy and
 owner approval are all still outstanding.
+
+
+## Cutover preflight snapshot: case sensitivity and writer completeness
+
+`assessWebhookCutoverSnapshot({outboxIds,anchorIds,writerModes,
+historicalInventoryAttested,writerInventoryAttested})` is a **pure,
+bounded offline audit** of explicitly supplied document-ID arrays and
+caller-declared writer modes. It has no Firebase/SDK imports, collection
+enumeration, network access, migration, TTL change or service startup.
+
+The audit preserves the exact Firestore document IDs rather than silently
+lowercasing them. It counts missing exact GUID anchors, normalized GUID
+case collisions, uppercase/mixed-case records, legacy/unknown writers,
+and anchors no longer accompanied by outbox documents. It returns
+**aggregate counts and fixed risk codes only**, not raw IDs, credentials
+or repo metadata.
+
+The localhost emulator suite verifies that the original single-collection
+writer can create two distinct documents differing only by GUID letter
+case; the preflight correctly blocks that sample. It also verifies that
+a synthetic, fully dual-anchored sample may meet the *observed sample*
+invariants. Such a result is **not** proof of a full live collection
+census, historical completeness, all-writer cutover or owner authorization.
+The report ALWAYS returns `productionReleaseAuthorized: false`,
+`ttlAllowed: false`, and `deleteAllowed: false`.
+
+Historical/writer completeness flags are caller claims and have **not**
+been verified against a production Firestore project. The audit cannot
+detect records never supplied in its arrays, in-flight clients, or other
+services using the old adapter. Any path to migration/TTL must establish
+these independently and separately obtain owner approval.
