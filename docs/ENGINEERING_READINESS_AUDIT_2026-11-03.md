@@ -17,7 +17,7 @@ The approved open-core decision and commercialization review triggers are in [AD
 | R01 | CI evidence | [Main run 41709994328](https://github.com/senanurcetin/Ops-Copilot/actions/runs/41709994328) succeeded; [PR #107](https://github.com/senanurcetin/Ops-Copilot/pull/107) had 312/312 application, 20/20 real localhost emulator tests | **Verified on that revision**; keep exact SHA, test counts, run IDs and limitations for each release |
 | R02 | Webhook replay and retention | [Issue #95](https://github.com/senanurcetin/Ops-Copilot/issues/95) remains open; historical backfill and GUID case reconciliation are emulated, not live migrations | **Production activation blocked** until complete historical data, all-writer race-free cutover, real quota/billing review and owner approval |
 | R03 | Browser E2E | [.github/workflows/e2e-tests.yml](../.github/workflows/e2e-tests.yml) is manual workflow_dispatch, not a required PR gate | **Gap:** build stable synthetic authenticated E2E and obtain release-gate approval |
-| R04 | Security CI supply chain | [.github/workflows/security-checks.yml](../.github/workflows/security-checks.yml) uses the moving reference dependency-check/Dependency-Check_Action@main | **Risk:** pin reviewed immutable action revision and check provenance, permissions and quota in a separate PR |
+| R04 | Security CI supply chain | [PR #110](https://github.com/senanurcetin/Ops-Copilot/pull/110) pinned upstream action source and minimized token permissions; its Dockerfile still uses a moving latest image as root | **Partial improvement:** [provenance review](security-workflow-supply-chain-review.md) documents unresolved runtime digest, database freshness and manually/scheduled scanner execution |
 | R05 | Branch protection | Public repo rulesets endpoint returned an empty list; main branch protection read returned 403 to connected GitHub App | **Unknown:** owner must verify branch rules, required reviews and bypass policy; do not infer the complete security posture |
 | R06 | Release process | [auditor release process](github-auditor-release-process.md) describes version 0.1.0 as **not published**; the visible GitHub release predates the current implementation | **Gap:** owner-reviewed versioned release, reproducible artifacts and checksums; never publish a package silently |
 | R07 | Disclosure and contribution | [SECURITY.md](../SECURITY.md) supplies private security contact, no guaranteed SLA; [CONTRIBUTING.md](../CONTRIBUTING.md) exists | **Baseline:** verify owner-maintained contact, private vulnerability reporting and response roles |
@@ -34,12 +34,12 @@ The approved open-core decision and commercialization review triggers are in [AD
 
 - [x] Preserve exact PR-head and postmerge checks.
 - [x] Replace outdated [testing guide](../tests/README.md) with actual application, emulator and E2E boundaries.
-- [ ] Add an inspectable release evidence template: commit, tests, threat cases, risk register, owner acceptance and rollback criteria.
-- [ ] Rehearse a deterministic outage and rollback using **only synthetic local fixtures**. Record RTO/RPO assumptions; do not restore real cloud data.
+- [x] Add an inspectable [release evidence template](RELEASE_EVIDENCE_TEMPLATE.md) covering commit, tests, risks, independent review, owner decision and rollback criteria. **Template published, release not authorized.**
+- [ ] Run an owner-reviewed [synthetic outage/recovery and rollback procedure](SYNTHETIC_OUTAGE_ROLLBACK_RUNBOOK.md) and record exact test/run evidence and RTO/RPO assumptions. **Procedure documented, staging/production rollback not executed.**
 
 ### Phase B — Security and production gates
 
-- [ ] Review and pin moving third-party CI actions to immutable, verified revisions; minimize job permissions and quota exposure.
+- [ ] [PR #110](https://github.com/senanurcetin/Ops-Copilot/pull/110) pinned the third-party action **source** and narrowed workflow permissions. Next prove digest-pinned runtime image provenance, vulnerability DB freshness, actual scanner output and quota before closing this gate.
 - [ ] Promote authenticated E2E to a release requirement only after isolated, reproducible synthetic fixtures are available.
 - [ ] Have repo owner verify branch protection, CI required checks, secret scanning/reporting and bypass rules.
 - [ ] Keep [Issue #95](https://github.com/senanurcetin/Ops-Copilot/issues/95) open until replay-safe complete migration and owner-approved retention/cost analysis.
@@ -58,3 +58,8 @@ The approved open-core decision and commercialization review triggers are in [AD
 A release decision must independently demonstrate: protected secrets and access; tenant/user authorization; verified licensing; stable E2E and emulator tests; incident/rollback drill; measured billing/quota headroom; operational response ownership; data privacy; documented go/no-go; and explicit owner approval.
 
 **No automatic change performed:** no paid hosting/API, npm publish, Github release, live Firebase operation, deployment, TTL, webhook activation, secret export or new production worker. Unverified items are not certified.
+
+
+## 4 November 2026 — evidence milestone
+
+The [release evidence template](RELEASE_EVIDENCE_TEMPLATE.md) and [synthetic recovery/rollback runbook](SYNTHETIC_OUTAGE_ROLLBACK_RUNBOOK.md) provide a consistent NO-GO-by-default review procedure. Their existence does not mean an owner-approved deployment, a measured production RTO/RPO, or a rollback execution. The separate [security workflow source pin](https://github.com/senanurcetin/Ops-Copilot/pull/110) still leaves a mutable Docker base image.
