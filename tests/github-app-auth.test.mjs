@@ -1,3 +1,4 @@
+import './github-webhook-recovery-evidence.test.mjs';
 import './verify-dependencycheck-report.test.mjs';
 import './security-workflow-contract.test.mjs';
 import './github-webhook-case-reconciliation.test.mjs';
