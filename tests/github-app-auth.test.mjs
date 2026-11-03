@@ -1,3 +1,4 @@
+import './github-webhook-outbox-worker.test.mjs';
 import './github-webhook-http.test.mjs';
 import './github-webhook-firestore-outbox.test.mjs';
 import './github-webhook-gate.test.mjs';

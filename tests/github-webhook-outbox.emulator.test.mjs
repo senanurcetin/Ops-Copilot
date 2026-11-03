@@ -10,6 +10,7 @@ import {
   doc, getDoc, setDoc,
 } from 'firebase/firestore';
 import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestore-outbox.mjs';
+import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { enqueueAuthorizedGitHubDelivery } from '../scripts/github-webhook-gate.mjs';
 import { createGitHubWebhookRequestHandler } from '../scripts/github-webhook-http.mjs';
 
@@ -189,5 +190,38 @@ test('Firestore security rules deny browser access to admin-only webhook outbox'
     await assert.rejects(setDoc(ref, { state: 'queued' }), /permission|PERMISSION_DENIED/i);
   } finally {
     await deleteClientApp(app);
+  }
+});
+
+
+test('two Admin Firestore clients grant only one concurrent worker lease and terminal completion', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const deliveryId = randomUUID();
+  const ref = a.db.doc('githubWebhookOutbox/' + deliveryId);
+  try {
+    await createFirestoreWebhookOutbox(a.db)({
+      deliveryId, event: 'workflow_run', action: 'completed',
+      installationId: 11, repositoryId: 42,
+      repository: 'example/private-repo', workflowRunId: 765,
+    });
+    const workers = [
+      createWebhookOutboxWorker(a.db),
+      createWebhookOutboxWorker(b.db),
+    ];
+    const attempts = await Promise.all(Array.from({ length: 20 }, (_, i) =>
+      workers[i % workers.length].claim(deliveryId, 'worker-' + i)));
+    const claims = attempts.filter(Boolean);
+    assert.equal(claims.length, 1);
+    assert.equal((await ref.get()).data().attempts, 1);
+    const successful = await workers[0].complete(
+      deliveryId, 'worker-' + attempts.indexOf(claims[0]), claims[0].leaseToken);
+    assert.equal(successful, true);
+    assert.equal((await ref.get()).data().state, 'completed');
+    assert.equal(await workers[1].claim(deliveryId, 'worker-new'), null);
+  } finally {
+    await ref.delete();
+    await Promise.all([closeAdmin(a), closeAdmin(b)]);
   }
 });
