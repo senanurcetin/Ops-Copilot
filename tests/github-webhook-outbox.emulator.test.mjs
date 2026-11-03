@@ -13,6 +13,7 @@ import {
 import { createFirestoreWebhookOutbox } from '../scripts/github-webhook-firestore-outbox.mjs';
 import { createDualAnchorWebhookOutbox } from '../scripts/github-webhook-dual-anchor-outbox.mjs';
 import { createWebhookLegacyAnchorBackfill } from '../scripts/github-webhook-legacy-anchor-backfill.mjs';
+import { assessWebhookCutoverSnapshot } from '../scripts/github-webhook-cutover-preflight.mjs';
 import { createWebhookOutboxWorker } from '../scripts/github-webhook-outbox-worker.mjs';
 import { createWebhookDeadLetterRecovery } from '../scripts/github-webhook-deadletter-recovery.mjs';
 import { createWebhookOutboxCompactor } from '../scripts/github-webhook-outbox-retention.mjs';
@@ -626,5 +627,91 @@ test('legacy adapter remains unsafe after synthetic work deletion despite backfi
   } finally {
     await Promise.allSettled([workRef.delete(),anchorRef.delete()]);
     await Promise.all([closeAdmin(a),closeAdmin(b)]);
+  }
+});
+
+
+test('cutover preflight flags real emulator case-variant legacy GUID documents', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const lowerId = randomUUID();
+  const upperId = lowerId.toUpperCase();
+  const refs = [
+    a.db.doc('githubWebhookOutbox/' + lowerId),
+    a.db.doc('githubWebhookOutbox/' + upperId),
+  ];
+  const work = id => ({
+    deliveryId: id, event:'workflow_run', action:'completed',
+    installationId:11, repositoryId:42,
+    repository:'example/private-repo', workflowRunId:765,
+  });
+  try {
+    assert.notEqual(upperId, lowerId);
+    assert.equal(await createFirestoreWebhookOutbox(a.db)(work(lowerId)), true);
+    assert.equal(await createFirestoreWebhookOutbox(b.db)(work(upperId)), true);
+    const stored = await Promise.all(refs.map(ref => ref.get()));
+    assert.equal(stored.every(doc => doc.exists), true);
+    const report = assessWebhookCutoverSnapshot({
+      outboxIds: stored.map(doc => doc.id),
+      anchorIds: [],
+      writerModes: ['legacy', 'dual_anchor'],
+      historicalInventoryAttested: true,
+      writerInventoryAttested: true,
+    });
+    assert.equal(report.outboxCount, 2);
+    assert.equal(report.missingAnchorCount, 2);
+    assert.equal(report.mixedCaseWorkCount, 1);
+    assert.equal(report.caseVariantCollisionGroups, 1);
+    assert.equal(report.legacyWriterCount, 1);
+    assert.equal(report.observedSampleInvariantsPass, false);
+    assert.equal(report.productionReleaseAuthorized, false);
+    assert.equal(JSON.stringify(report).includes(lowerId), false);
+    assert.equal(JSON.stringify(report).includes(upperId), false);
+  } finally {
+    await Promise.allSettled(refs.map(ref => ref.delete()));
+    await Promise.all([closeAdmin(a), closeAdmin(b)]);
+  }
+});
+
+test('all dual-anchor synthetic emulator records can pass preflight, not authorize TTL', async () => {
+  assertLocalOnly();
+  const a = newAdmin();
+  const b = newAdmin();
+  const ids = [randomUUID(), randomUUID()];
+  const work = id => ({
+    deliveryId: id, event:'workflow_run', action:'completed',
+    installationId:11, repositoryId:42,
+    repository:'example/private-repo', workflowRunId:765,
+  });
+  const workRefs = ids.map(id => a.db.doc('githubWebhookOutbox/' + id));
+  const anchorRefs = ids.map(id => a.db.doc('githubWebhookDedupAnchors/' + id));
+  try {
+    assert.equal(await createDualAnchorWebhookOutbox(a.db)(work(ids[0])), true);
+    assert.equal(await createDualAnchorWebhookOutbox(b.db)(work(ids[1])), true);
+    const [workDocs,anchorDocs] = await Promise.all([
+      Promise.all(workRefs.map(ref => ref.get())),
+      Promise.all(anchorRefs.map(ref => ref.get())),
+    ]);
+    assert.equal(workDocs.every(doc => doc.exists), true);
+    assert.equal(anchorDocs.every(doc => doc.exists), true);
+    const report=assessWebhookCutoverSnapshot({
+      outboxIds: workDocs.map(doc => doc.id),
+      anchorIds: anchorDocs.map(doc => doc.id),
+      writerModes: ['dual_anchor'],
+      historicalInventoryAttested: true,
+      writerInventoryAttested: true,
+    });
+    assert.equal(report.observedSampleInvariantsPass, true);
+    assert.equal(report.missingAnchorCount, 0);
+    assert.equal(report.caseVariantCollisionGroups, 0);
+    assert.equal(report.productionReleaseAuthorized, false);
+    assert.equal(report.ttlAllowed, false);
+    assert.equal(report.deleteAllowed, false);
+    assert.equal((await Promise.all(workRefs.map(ref => ref.get())))
+      .every(doc => doc.exists), true);
+  } finally {
+    await Promise.allSettled([...workRefs, ...anchorRefs].map(ref => ref.delete()));
+    await Promise.all([closeAdmin(a), closeAdmin(b)]);
   }
 });

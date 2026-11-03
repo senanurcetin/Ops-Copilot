@@ -98,3 +98,30 @@ validates concurrent calls and unchanged source records.
 **Release is blocked** until every item above and the existing owner
 decision gates are reviewed. In particular, an emulator success is not
 a declaration of collection-wide production migration.
+
+
+## Cutover snapshot preflight — no production authorization
+
+The optional `assessWebhookCutoverSnapshot` analyzer accepts a
+**caller-supplied bounded list** of source outbox document IDs, anchor
+document IDs, and declared writer modes. It detects missing exact
+anchors, case-fold GUID collisions, uppercase/mixed-case historical IDs,
+remaining legacy writers and unknown writers. It returns only counts
+and fixed risk codes, never actual GUIDs.
+
+A fully matching **synthetic** sample may pass its local invariants,
+but all reports explicitly prohibit production deletion, TTL and
+adapter release. Manually asserted inventory-completeness flags are
+not independently verified. There is still no authenticated service
+enumeration, live project inventory or production migration.
+
+- [ ] Independently verify exhaustive **historical** GUID coverage
+- [ ] Reconcile uppercase/case-variant collisions without losing identity
+- [ ] Independently inventory and retire **every** legacy writer
+- [ ] Establish a provable pause/drain/cutover barrier for in-flight
+      historical transactions
+- [ ] Review real Firestore usage/quota and obtain explicit owner approval
+
+The emulator test demonstrates why this matters: the old adapter can
+create two independent Firestore documents for GUID strings that
+differ only by letter case. This release blocker remains in force.
