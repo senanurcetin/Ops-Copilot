@@ -15,7 +15,7 @@ jobs:
     name: Security Headers Check
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
     name: Dependency Check
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 

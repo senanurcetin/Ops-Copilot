@@ -24,7 +24,7 @@ jobs:
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0000000000"
       NEXT_PUBLIC_FIREBASE_APP_ID: 1:0000000000:web:placeholder
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: true
       - uses: actions/setup-node@v4
