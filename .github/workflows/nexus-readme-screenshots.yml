@@ -49,7 +49,7 @@ jobs:
           for f in docs/assets/nexus-login-desktop.png docs/assets/nexus-login-mobile.png docs/assets/nexus-secom-case-study-desktop.png docs/assets/nexus-secom-case-study-mobile.png; do
             test $(stat -c%s "$f") -gt 12000
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nexus-ops-copilot-readme-screenshots
           path: docs/assets/nexus-*.png
