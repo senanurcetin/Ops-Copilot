@@ -36,7 +36,7 @@ test('standalone package includes only two working CLI bins, documentation and l
     const names = (await readdir(destination)).sort();
     assert.deepEqual(names, ['CHANGELOG.md', 'LICENSE', 'README.md', 'bin', 'package.json']);
     assert.deepEqual((await readdir(join(destination, 'bin'))).sort(), [
-      'github-actions-audit.mjs', 'github-actions-compare.mjs',
+      'actions-report-file.mjs', 'github-actions-audit.mjs', 'github-actions-compare.mjs',
     ]);
     const manifest = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'));
     assert.equal(manifest.name, '@senanurcetin/github-actions-auditor');
@@ -66,7 +66,7 @@ test('standalone package includes only two working CLI bins, documentation and l
     const actualFiles = packed[0].files.map(entry => entry.path).sort();
     assert.deepEqual(actualFiles, [
       'CHANGELOG.md', 'LICENSE', 'README.md',
-      'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs',
+      'bin/actions-report-file.mjs', 'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs',
       'package.json',
     ]);
     assert.ok(packed[0].size > 0);
@@ -161,7 +161,7 @@ test('actual npm archive installs without a registry in an independent consumer'
     assert.equal(packed[0].filename, 'senanurcetin-github-actions-auditor-0.1.0.tgz');
     assert.deepEqual(packed[0].files.map(item => item.path).sort(), [
       'CHANGELOG.md', 'LICENSE', 'README.md',
-      'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs', 'package.json',
+      'bin/actions-report-file.mjs', 'bin/github-actions-audit.mjs', 'bin/github-actions-compare.mjs', 'package.json',
     ]);
     await mkdir(consumer);
     await writeFile(join(consumer, 'package.json'),

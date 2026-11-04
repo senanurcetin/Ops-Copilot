@@ -61,7 +61,12 @@ Ops-Copilot also includes a standalone, **read-only GitHub API integration** for
 ```bash
 node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
 node --test tests/github-actions-audit.test.mjs
+# Save a new report file instead of piping stdout:
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --csv --output-file audit.csv
+node scripts/github-actions-compare.mjs senanurcetin/Ops-Copilot senanurcetin/ot-sentinel --json --output-file comparison.json
 ```
+
+The opt-in `--output-file PATH` option requires exactly one of `--json`, `--markdown` or `--csv`. Reports are created with owner-only file permissions where supported and **existing files are never overwritten** (`EEXIST`); output directories must already exist. A rerun should use a new filename. No remote write permissions are required.
 
 It supports private repositories with an optional read-only `GH_TOKEN`. Select an inclusive UTC time window with `--since 2026-10-01 --until 2026-10-12`, including for multi-repository comparisons. Both boundaries are validated before any API request.
 
