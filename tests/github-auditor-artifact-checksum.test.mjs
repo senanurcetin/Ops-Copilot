@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -17,7 +17,7 @@ function sandbox(fn) {
 }
 function fixture(directory) {
   writeFileSync(join(directory, name), Buffer.from('fake offline archive for checksum-only contract'));
-  return {directory, version};
+  return {root: directory, directory, version};
 }
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
@@ -50,7 +50,7 @@ test('an existing checksum record cannot be silently replaced', () => sandbox(di
 }));
 
 test('missing or empty artifact and manifest fail closed', () => sandbox(directory => {
-  const opts = {directory, version};
+  const opts = {root: directory, directory, version};
   assert.throws(() => createCandidateChecksum(opts));
   writeFileSync(join(directory, name), '');
   assert.throws(() => createCandidateChecksum(opts));
@@ -61,9 +61,9 @@ test('missing or empty artifact and manifest fail closed', () => sandbox(directo
 test('untrusted version and mismatched archive filename fail closed', () => sandbox(directory => {
   fixture(directory);
   for (const bad of ['../x', '1.0', 'v1.0.0', '1.0.0/secret', '1.0.0+build']) {
-    assert.throws(() => createCandidateChecksum({directory, version: bad}));
+    assert.throws(() => createCandidateChecksum({root: directory, directory, version: bad}));
   }
-  assert.throws(() => createCandidateChecksum({directory, version: '0.1.1'}));
+  assert.throws(() => createCandidateChecksum({root: directory, directory, version: '0.1.1'}));
 }));
 
 test('duplicate, malformed or unrelated lines in checksum manifest are rejected', () => sandbox(directory => {
@@ -91,6 +91,48 @@ test('symbolic-link artifact and checksum record are refused', t => sandbox(dire
   rmSync(join(directory, 'SHA256SUMS'));
   symlinkSync(second, join(directory, 'SHA256SUMS'));
   assert.throws(() => verifyCandidateChecksum(opts));
+}));
+
+test('a symlinked or junctioned dist parent cannot redirect SHA256SUMS outside the root', t => sandbox(base => {
+  const root = join(base, 'repo');
+  const outside = join(base, 'outside');
+  mkdirSync(root);
+  mkdirSync(join(outside, 'release-evidence'), {recursive: true});
+  fixture(join(outside, 'release-evidence'));
+  // Junctions need no elevated privilege on Windows; other platforms use a directory symlink.
+  try { symlinkSync(outside, join(root, 'dist'), process.platform === 'win32' ? 'junction' : 'dir'); }
+  catch (error) {
+    if (['EPERM', 'EACCES', 'ENOTSUP'].includes(error.code)) {
+      t.skip(`cannot create directory link in this environment (${error.code})`);
+      return;
+    }
+    throw error;
+  }
+  const opts = {root, directory: join(root, 'dist', 'release-evidence'), version};
+  assert.throws(() => createCandidateChecksum(opts), /integrity check failed/);
+  assert.throws(() => verifyCandidateChecksum(opts), /integrity check failed/);
+  assert.equal(existsSync(join(outside, 'release-evidence', 'SHA256SUMS')), false);
+}));
+
+test('an evidence directory outside the root is refused', () => sandbox(base => {
+  const root = join(base, 'repo');
+  const elsewhere = join(base, 'elsewhere');
+  mkdirSync(root);
+  mkdirSync(elsewhere);
+  fixture(elsewhere);
+  for (const directory of [elsewhere, join(root, '..', 'elsewhere')]) {
+    assert.throws(() => createCandidateChecksum({root, directory, version}), /integrity check failed/);
+  }
+  assert.equal(existsSync(join(elsewhere, 'SHA256SUMS')), false);
+}));
+
+test('a regular nested dist/release-evidence directory inside the root is accepted', () => sandbox(root => {
+  const directory = join(root, 'dist', 'release-evidence');
+  mkdirSync(directory, {recursive: true});
+  fixture(directory);
+  const opts = {root, directory, version};
+  createCandidateChecksum(opts);
+  assert.equal(verifyCandidateChecksum(opts).checksumManifestVerified, true);
 }));
 
 test('oversized archives are rejected before reading contents', () => sandbox(directory => {

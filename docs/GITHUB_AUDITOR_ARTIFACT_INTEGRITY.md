@@ -32,6 +32,12 @@ reads the **actual** local `.tgz` bytes, and writes a single
 Repeat `create` never overwrites evidence. `verify` fails closed on a changed
 archive, wrong filename, wrong checksum, duplicate lines, empty/oversized input,
 or symbolic-link artifact/manifest. It never takes a caller-supplied CLI path.
+Both commands also refuse to run unless `dist/` and `dist/release-evidence/`
+are real directories inside the repository checkout: a symlinked or
+junctioned path component, or a canonical path that resolves outside the
+repository root, fails closed before any read or write. This is a
+check-then-use guard for an operator-controlled build tree, not protection
+against a concurrent local attacker racing the filesystem.
 
 The entire `dist/` directory is ignored by Git. Do not commit customer data,
 credentials, local build intermediates or an unreviewed binary archive. Record

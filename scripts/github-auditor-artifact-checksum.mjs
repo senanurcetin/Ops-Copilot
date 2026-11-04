@@ -1,9 +1,12 @@
-import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  constants, closeSync, fstatSync, lstatSync, openSync, readFileSync, realpathSync, statSync, writeFileSync,
+} from 'node:fs';
 import { createHash } from 'node:crypto';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const EVIDENCE_DIR = fileURLToPath(new URL('../dist/release-evidence/', import.meta.url));
+const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
+const EVIDENCE_SUBPATH = ['dist', 'release-evidence'];
 const PACKAGE_FILE = new URL('../tools/github-actions-auditor/package.json', import.meta.url);
 const MANIFEST = 'SHA256SUMS';
 const MAX_ARCHIVE_BYTES = 12 * 1024 * 1024;
@@ -39,12 +42,45 @@ function regularFileBytes(path, maxBytes) {
   finally { if (fd !== undefined) closeSync(fd); }
 }
 
-function candidate({ directory = EVIDENCE_DIR, version = packageVersion() } = {}) {
-  if (typeof directory !== 'string' || !VERSION_PATTERN.test(version)) fail();
+const samePath = process.platform === 'win32'
+  ? (a, b) => a.toLowerCase() === b.toLowerCase()
+  : (a, b) => a === b;
+
+/**
+ * Resolve the evidence directory and require that it stays inside `root`.
+ * Every path component from `root` down to the evidence directory (for the
+ * default layout: `dist` and `dist/release-evidence`) must be a real
+ * directory, never a symlink or Windows junction, and the canonical realpath
+ * must still sit at the same relative location under the canonical root.
+ * `root` itself may live below a symlinked ancestor (e.g. a synced folder);
+ * only components the script writes through are constrained. This narrows,
+ * but cannot fully close, check-then-use races by a concurrent local writer.
+ */
+function evidenceDirectory(root, directory) {
+  if (typeof root !== 'string' || typeof directory !== 'string') fail();
   try {
-    const stat = lstatSync(directory);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) fail();
+    const absRoot = resolve(root);
+    const absDir = resolve(directory);
+    const rel = relative(absRoot, absDir);
+    if (isAbsolute(rel) || rel === '..' || rel.startsWith(`..${sep}`)) fail();
+    if (!statSync(absRoot).isDirectory()) fail();
+    let current = absRoot;
+    for (const part of rel ? rel.split(sep) : []) {
+      current = join(current, part);
+      const stat = lstatSync(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) fail();
+    }
+    const realRoot = realpathSync.native(absRoot);
+    const realDir = realpathSync.native(absDir);
+    if (!samePath(realDir, rel ? join(realRoot, rel) : realRoot)) fail();
+    return realDir;
   } catch { fail(); }
+}
+
+function candidate({ root = REPO_ROOT, directory = join(root, ...EVIDENCE_SUBPATH),
+  version = packageVersion() } = {}) {
+  if (!VERSION_PATTERN.test(version)) fail();
+  directory = evidenceDirectory(root, directory);
   const name = `senanurcetin-github-actions-auditor-${version}.tgz`;
   const bytes = regularFileBytes(join(directory, name), MAX_ARCHIVE_BYTES);
   return {
