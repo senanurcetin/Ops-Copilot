@@ -7,6 +7,7 @@
 ## Before any release
 
 1. Start from a reviewed main branch and check that lint, typecheck, Node tests and the Next.js build all pass.
+   Complete a candidate-specific [release evidence record](RELEASE_EVIDENCE_TEMPLATE.md) for the exact SHA and keep the default NO-GO until all applicable checks and owner approval are recorded. This template does not publish or deploy.
 2. Inspect the independent package manifest at [tools/github-actions-auditor/package.json](../tools/github-actions-auditor/package.json), the [changelog](../tools/github-actions-auditor/CHANGELOG.md) and [package README](../tools/github-actions-auditor/README.md).
 3. From the repository root, run:
 

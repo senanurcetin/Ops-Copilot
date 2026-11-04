@@ -1,35 +1,55 @@
 # Testing Guide
 
-## Current test layers
+**Snapshot:** 3 November 2026. Commands describe current repository scripts, not production service startup or production permission.
 
-- `npm run test` runs the lightweight document-ranking unit checks with the Node test runner.
-- `npx playwright test` is kept as a draft E2E harness for manual verification work.
+## Application test layers
 
-## Unit tests
+From a clean repository checkout:
 
-Current unit coverage is intentionally narrow and focuses on ranking behavior in:
+~~~bash
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+~~~
 
-- `tests/document-ranking.test.ts`
+The root package.json test script uses Node's test runner with tsx. It covers document ranking, server-side authentication and boundaries, public GitHub Actions audits, reports and packaging, GitHub App authentication, signed webhook validation, synthetic queue transactions, replay, recovery, retention and offline migration risk analysis, as well as UX and evidence utilities.
 
-Run it with:
+**Revision-specific evidence:** [PR #107](https://github.com/senanurcetin/Ops-Copilot/pull/107) had **312/312** passing application tests. Test totals may change on future commits.
 
-```bash
-npm run test
-```
+## Real localhost Firebase Auth and Firestore emulators
 
-## Playwright E2E
+The [CI workflow](../.github/workflows/ci.yml) runs this separate stage with the **demo-nexus-ops-isolation** project and exact localhost emulator addresses. No production Firestore project is authorized.
 
-Playwright is configured in [`playwright.config.ts`](../playwright.config.ts). The browser tests are not treated as required CI gates yet because the authenticated product flow still needs dedicated test fixtures and stable selectors.
+~~~bash
+npm run test:firestore:emulator
+~~~
 
-Run the draft E2E harness manually with:
+Running this command directly requires already running and correctly isolated demo emulators (the CI job uses Firebase emulators:exec). [PR #107](https://github.com/senanurcetin/Ops-Copilot/pull/107) reported **20/20** real emulator tests. These validate local Firestore transaction behavior, not live IAM, pricing or real retention.
 
-```bash
+## Browser end-to-end tests
+
+~~~bash
 npm run e2e
 npm run e2e:headed
 npm run e2e:debug
-```
+~~~
 
-## CI posture
+[Playwright workflow](../.github/workflows/e2e-tests.yml) currently runs via **manual workflow_dispatch** only. It is not an independently verified, mandatory authenticated-product release gate. Do not infer production readiness from successful unit tests.
 
-- Main CI uses lint, typecheck, unit test, and build.
-- The Playwright workflow is `workflow_dispatch` only until the browser tests are upgraded from draft coverage to stable release gates.
+## Other scoped checks
+
+~~~bash
+npm run test:github-actions-audit
+npm run test:github-app
+npm run auditor:pack:dry-run
+~~~
+
+The packaging dry run does not publish anything to npm. The GitHub REST auditor is read-only. Some webhook tools operate on explicitly provided local snapshots and do not make a live Firestore census.
+
+## Release evidence requirements
+
+For each candidate, record the exact commit SHA, GitHub Actions run and job IDs, CircleCI and deployment statuses, test counts and their data/environment boundaries, security limitations and the owner-approved release decision. A failed historical run must remain visible. Never include secrets, customer documents, plant data or production credentials in tests or artifacts.
+
+See the [engineering readiness audit](../docs/ENGINEERING_READINESS_AUDIT_2026-11-03.md) for remaining release blockers.

@@ -1,5 +1,9 @@
 name: Security Checks
 
+# Scheduled/manual only; no deployment or production activation.
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   schedule:
@@ -12,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Check security headers in next.config
         run: |
@@ -28,9 +34,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
+        uses: dependency-check/Dependency-Check_Action@1e54355a8b4c8abaa8cc7d0b70aa655a3bb15a6c # verified upstream commit; base image remains mutable
         with:
           project: "Ops-Copilot"
           path: "."
@@ -38,6 +46,10 @@ jobs:
           args: >
             --enableExperimental
             --exclude node_modules
+
+      - name: Verify OWASP report integrity and declared NVD freshness
+        if: always()
+        run: node scripts/verify-dependencycheck-report.mjs
 
       - name: Upload results
         if: always()
