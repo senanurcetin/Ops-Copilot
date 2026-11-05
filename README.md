@@ -1,17 +1,35 @@
 # Ops-Copilot — Document-Grounded Industrial AI Assistant
 
-> **Senior engineering readiness (3 November 2026):** [evidence-backed audit and phased action plan](docs/ENGINEERING_READINESS_AUDIT_2026-11-03.md) · [open-core and commercialization decision](docs/adr/0001-open-core-commercial-boundary.md). Passing CI alone is not production certification.
-
-> **Reviewer map · 2 November 2026:** This repository has two **separate** lines of work: [industrial troubleshooting/RAG and SECOM research](docs/case-study.md) and a [read-only GitHub Actions REST auditor](docs/github-actions-integration.md) with [public API demonstration evidence](docs/github-api-live-demo.md). Review [local setup](#local-setup), [quality checks](#quality-checks) and [operational limits](#scope-and-operational-boundaries) before interpreting screenshots or integration claims.
->
-> **Do not infer:** the public sign-in screenshot is **not** an authenticated operator session; document-grounded advice is not certified industrial safety guidance; the GitHub auditor's data and tests do not constitute a GitHub partnership or developer-program acceptance.
-
+[![Ops-Copilot CI](https://github.com/senanurcetin/Ops-Copilot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/senanurcetin/Ops-Copilot/actions/workflows/ci.yml)
 
 <p align="right"><img src="docs/assets/nexus-official-midnight.svg" alt="NEXUS Official Midnight brand" width="220"></p>
 
+Ops-Copilot is an industrial AI assistant for factory operators who need fast, document-grounded troubleshooting support on the production floor. It now also includes a public industrial data science case study built on the UCI SECOM manufacturing dataset, so the repository demonstrates both product engineering and applied ML reasoning.
+
+## At a glance
+
 **Next.js · Firebase · Genkit/Gemini · Document retrieval · Operator checklists · SECOM ML case study**
 
-Ops-Copilot is an industrial AI assistant for factory operators who need fast, document-grounded troubleshooting support on the production floor. It now also includes a public industrial data science case study built on the UCI SECOM manufacturing dataset, so the repository demonstrates both product engineering and applied ML reasoning.
+This repository has two **separate** lines of work:
+
+| Line of work | What it is | Start here |
+| --- | --- | --- |
+| Industrial troubleshooting/RAG + SECOM research | Next.js/Firebase operator assistant with document-grounded answers and checklists, plus an offline SECOM failure-risk case study | [Case study](docs/case-study.md) · [Local setup](#local-setup) |
+| Read-only GitHub Actions REST auditor | Standalone Node CLI that reads workflow runs and job timings and suggests optimization candidates without making changes | [Integration guide](docs/github-actions-integration.md) · [Public API demo evidence](docs/github-api-live-demo.md) |
+
+**What it is not:** a certified industrial safety product, a deployed live model service, or a polished public SaaS deployment. See [Limitations & review notes](#limitations--review-notes) and [Scope and operational boundaries](#scope-and-operational-boundaries).
+
+## Key results / what you can try
+
+- **SECOM failure-risk model (chronological 80/20 holdout):** ROC-AUC `0.7659` and PR-AUC `0.1745` vs a naive baseline of `0.500` / `0.0541`; reviewing the top 10% captures `29.4%` of failures (`2.89x` lift vs random review). Details in [Evaluation snapshot](#evaluation-snapshot).
+- **Ask operator questions** with document-grounded answers, the most relevant manual section highlighted, and procedural answers converted into interactive checklists ([What it does](#what-it-does)).
+- **Audit GitHub Actions usage read-only** for any public repository, or compare two repositories side by side ([GitHub Actions REST API integration](#github-actions-rest-api-integration)).
+- **Explore workflow runs interactively** at `/developer-tools/github-actions` when the app runs locally ([Public interactive GitHub Actions Explorer](#public-interactive-github-actions-explorer)).
+- **Rebuild the SECOM artifacts** with `npm run case-study:refresh` ([Quality checks](#quality-checks)).
+
+## Demo
+
+Portfolio case study: [senanur-cetin.vercel.app/projects/ops-copilot](https://senanur-cetin.vercel.app/projects/ops-copilot)
 
 ![NEXUS Ops-Copilot public sign-in screen (real local Chromium, 1440 × 960)](docs/assets/nexus-login-desktop.png)
 
@@ -22,8 +40,6 @@ Ops-Copilot is an industrial AI assistant for factory operators who need fast, d
 <img src="docs/assets/nexus-login-mobile.png" alt="NEXUS Ops-Copilot public login on a mobile Chromium viewport" width="390">
 
 </details>
-
-Portfolio case study: [senanur-cetin.vercel.app/projects/ops-copilot](https://senanur-cetin.vercel.app/projects/ops-copilot)
 
 In-app case study route: `/case-study` after running the app locally
 
@@ -40,6 +56,33 @@ Earlier, pre-NEXUS case-study walkthrough (archival): [`docs/assets/ops-copilot-
 GitHub case-study brief: [`docs/case-study.md`](docs/case-study.md)
 
 Engineering evidence: [`docs/case-study.md`](docs/case-study.md)
+
+## Quick start
+
+**App** (Node.js 20+, a Firebase project with Authentication and Firestore, a Google AI Studio API key — full steps in [Local setup](#local-setup)):
+
+```bash
+npm install
+cp .env.example .env   # add Firebase web config and Gemini API key
+npm run dev            # http://localhost:9002
+```
+
+**GitHub Actions auditor CLI** (read-only; optional `GH_TOKEN` only for private repositories):
+
+```bash
+node scripts/github-actions-audit.mjs senanurcetin/Ops-Copilot --limit 20
+node --test tests/github-actions-audit.test.mjs
+```
+
+## Limitations & review notes
+
+> **Senior engineering readiness (3 November 2026):** [evidence-backed audit and phased action plan](docs/ENGINEERING_READINESS_AUDIT_2026-11-03.md) · [open-core and commercialization decision](docs/adr/0001-open-core-commercial-boundary.md). Passing CI alone is not production certification.
+
+> **Reviewer map · 2 November 2026:** This repository has two **separate** lines of work: [industrial troubleshooting/RAG and SECOM research](docs/case-study.md) and a [read-only GitHub Actions REST auditor](docs/github-actions-integration.md) with [public API demonstration evidence](docs/github-api-live-demo.md). Review [local setup](#local-setup), [quality checks](#quality-checks) and [operational limits](#scope-and-operational-boundaries) before interpreting screenshots or integration claims.
+>
+> **Do not infer:** the public sign-in screenshot is **not** an authenticated operator session; document-grounded advice is not certified industrial safety guidance; the GitHub auditor's data and tests do not constitute a GitHub partnership or developer-program acceptance.
+
+Further limits are listed under [Limitations](#limitations) and [Scope and operational boundaries](#scope-and-operational-boundaries).
 
 ## Why this project exists
 
