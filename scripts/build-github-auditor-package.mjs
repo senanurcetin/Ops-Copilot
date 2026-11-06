@@ -77,6 +77,9 @@ export async function buildPackage({ destination = outputDirectory, repositoryRo
     copyFile(join(sourceRoot, 'LICENSE'), join(output, 'LICENSE')),
     copyFile(join(sourceRoot, 'tools', 'github-actions-auditor', 'CHANGELOG.md'), join(output, 'CHANGELOG.md')),
   ]);
+  // Both entrypoints import the same dependency-free safe file writer.
+  await copyFile(join(sourceRoot, 'scripts', 'actions-report-file.mjs'),
+    join(output, 'bin', 'actions-report-file.mjs'));
   for (const command of ['github-actions-audit', 'github-actions-compare']) {
     const file = join(output, manifest.bin[command]);
     const source = join(sourceRoot, 'scripts', command + '.mjs');
