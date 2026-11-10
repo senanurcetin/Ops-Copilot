@@ -55,8 +55,11 @@ export function assessDependencyCheckEvidence(report, {
   const generatedAtMs = parseTimestamp(projectInfo.reportDate);
   validateAge(generatedAtMs, nowMs, maxReportAgeMs);
 
+  // Dependency-Check 13 renamed the API freshness entry. Cache timestamps
+  // alone are insufficient evidence of an NVD API freshness check.
   const nvdEvidence = scanInfo.dataSource.find(source =>
-    isRecord(source) && source.name === 'NVD CVE Checked');
+    isRecord(source) &&
+    ['NVD CVE Checked', 'NVD API Last Checked'].includes(source.name));
   if (!nvdEvidence) fail();
   const nvdCheckedAtMs = parseTimestamp(nvdEvidence.timestamp);
   validateAge(nvdCheckedAtMs, nowMs, maxDataAgeMs);
@@ -78,6 +81,17 @@ export function assessDependencyCheckEvidence(report, {
          !Array.isArray(dependency.vulnerabilities))) fail();
     if (dependency.fileName === 'package.json' ||
         dependency.fileName === 'package-lock.json') {
+      hasRootNpmManifest = true;
+    }
+    // Modern npm analyzers report virtual package dependencies and record the
+    // scanned root manifest in projectReferences instead of its own fileName.
+    // Reject nested manifests and non-npm references rather than accepting an
+    // arbitrary path that merely ends with package-lock.json.
+    if (Array.isArray(dependency.packages) && dependency.packages.some(pkg =>
+      isRecord(pkg) && typeof pkg.id === 'string' && pkg.id.startsWith('pkg:npm/')) &&
+      Array.isArray(dependency.projectReferences) &&
+      dependency.projectReferences.some(reference => typeof reference === 'string' &&
+        /^(?:\.\/)?package(?:-lock)?\.json(?:: (?:direct|transitive))?$/.test(reference))) {
       hasRootNpmManifest = true;
     }
     if (Array.isArray(dependency.vulnerabilities)) {
