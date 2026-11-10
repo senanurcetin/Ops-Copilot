@@ -56,6 +56,38 @@ test('old NVD evidence or missing NVD checked source is rejected',()=>{
   assert.throws(()=>assess(noNvd));
 });
 
+test('Dependency-Check 13 API timestamp and virtual npm root references are accepted',()=>{
+  const report=baseReport();
+  report.scanInfo.dataSource=[{name:'NVD API Last Checked',timestamp:'2026-11-03T23:00:00Z'}];
+  report.dependencies=[{
+    isVirtual:true,
+    fileName:'example-package:1.0.0',
+    packages:[{id:'pkg:npm/example-package@1.0.0'}],
+    projectReferences:['./package-lock.json: transitive'],
+  }];
+  const result=assess(report);
+  assert.equal(result.dependencyCount,1);
+  assert.equal(result.nvdEvidenceAgeHours,1);
+  assert.equal(result.productionReleaseAuthorized,false);
+});
+
+test('virtual references cannot substitute nested manifests or non-npm packages',()=>{
+  for(const reference of ['nested/package-lock.json: transitive','../package.json','not-package.json']){
+    const report=baseReport();
+    report.dependencies=[{fileName:'example:1.0.0',packages:[{id:'pkg:npm/example@1.0.0'}],projectReferences:[reference]}];
+    assert.throws(()=>assess(report));
+  }
+  const report=baseReport();
+  report.dependencies=[{fileName:'example:1.0.0',packages:[{id:'pkg:pypi/example@1.0.0'}],projectReferences:['package-lock.json']}];
+  assert.throws(()=>assess(report));
+});
+
+test('cache-only timestamps do not establish an NVD freshness check',()=>{
+  const report=baseReport();
+  report.scanInfo.dataSource=[{name:'NVD Cache Last Checked',timestamp:'2026-11-03T23:00:00Z'}];
+  assert.throws(()=>assess(report));
+});
+
 test('NVD timestamp far after scan date is rejected',()=>{
   const r=baseReport();
   r.scanInfo.dataSource[0].timestamp='2026-11-04T00:01:00Z';
