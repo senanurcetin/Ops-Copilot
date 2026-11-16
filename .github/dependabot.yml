@@ -8,6 +8,11 @@ updates:
       time: "03:00"
       timezone: "Europe/Istanbul"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
     groups:
       non-major-dependencies:
         update-types:
