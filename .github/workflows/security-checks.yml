@@ -37,15 +37,39 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@1e54355a8b4c8abaa8cc7d0b70aa655a3bb15a6c # verified upstream commit; base image remains mutable
+      - name: Require the NVD API key
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::error::Add the NVD_API_KEY repository secret (free key from nvd.nist.gov); without it the NVD download is rate-limited."
+            exit 1
+          fi
+
+      # NVD data is updated on every run and cached between runs; the scanner
+      # code itself comes from an image pinned by digest, never a moving tag.
+      - name: Restore NVD data cache
+        uses: actions/cache@v4
         with:
-          project: "Ops-Copilot"
-          path: "."
-          format: "JSON"
-          args: >
-            --enableExperimental
-            --exclude node_modules
+          path: ${{ runner.temp }}/dc-data
+          key: dependency-check-data-${{ github.run_id }}
+          restore-keys: dependency-check-data-
+
+      - name: Run OWASP Dependency-Check
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          # owasp/dependency-check 13.0.0, resolved 2026-11-18
+          DC_IMAGE: owasp/dependency-check@sha256:0e8f69ad5b00d62000937f4e57189812343f6903d9c83ee712012d51542a020a
+        run: |
+          mkdir -p "$RUNNER_TEMP/dc-data" reports
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:/src:ro" \
+            -v "$GITHUB_WORKSPACE/reports:/report" \
+            -v "$RUNNER_TEMP/dc-data:/usr/share/dependency-check/data" \
+            "$DC_IMAGE" \
+            --scan /src --project "Ops-Copilot" --format JSON --out /report \
+            --enableExperimental --exclude "**/node_modules/**" \
+            --nvdApiKey "$NVD_API_KEY"
 
       - name: Verify OWASP report integrity and declared NVD freshness
         if: always()

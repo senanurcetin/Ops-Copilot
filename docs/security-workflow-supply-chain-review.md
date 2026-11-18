@@ -91,3 +91,28 @@ production approval or prove exhaustive dependency coverage.
 Follow-up remains necessary: digest-pin or replace scanner runtime,
 verify actual execution/artifact metadata, review indicated CVEs and
 independently assess database freshness in an owner-approved test.
+
+
+## 19 November 2026 — scanner image pinned by digest (issue #118)
+
+The Dependency-Check job no longer uses the third-party Docker action, whose
+Dockerfile pulled `owasp/dependency-check-action:latest` and ran as root.
+
+- The scanner now runs from `owasp/dependency-check@sha256:0e8f69ad5b00…a020a`
+  (version 13.0.0), pinned by digest in the workflow.
+- The container runs as the runner's own UID and GID, not as root, and
+  mounts the checkout read-only.
+- The pinned image contains no vulnerability data. Each run updates the NVD
+  data with the `NVD_API_KEY` repository secret, and `actions/cache` keeps
+  that data between runs. Code is reproducible, while data stays current,
+  which the existing 72-hour freshness check in
+  `scripts/verify-dependencycheck-report.mjs` requires.
+- If the secret is missing, the job fails with an explicit error. It never
+  falls back to a slow or partial download.
+- `tests/security-workflow-contract.test.mjs` enforces all of the above:
+  digest-pinned image, no `:latest`, non-root user, read-only checkout,
+  key requirement and data cache.
+
+Remaining: record the first successful manual run and its report artifact
+here, and bump the digest deliberately when a new Dependency-Check release
+is reviewed.
