@@ -42,8 +42,9 @@ as reproducible. Running the image as root is also a review concern.
 A report can be stale even when the scan succeeds, particularly if its
 vulnerability database age is unknown.
 
-- [ ] Replace or sandbox the scanner with a reviewed digest-pinned image
-  or a reproducible, explicitly versioned equivalent.
+- [x] Replace or sandbox the scanner with a reviewed digest-pinned image
+  or a reproducible, explicitly versioned equivalent (25 November 2026, #118;
+  see below).
 - [ ] Prove vulnerability database version/freshness and report coverage.
 - [ ] Verify a manual or scheduled security workflow execution and an
   actual nonempty, parseable JSON artifact; normal PR build does not
@@ -91,3 +92,27 @@ production approval or prove exhaustive dependency coverage.
 Follow-up remains necessary: digest-pin or replace scanner runtime,
 verify actual execution/artifact metadata, review indicated CVEs and
 independently assess database freshness in an owner-approved test.
+
+
+## 25 November 2026 — digest-pinned, non-root scanner image (#118)
+
+The weekly/manual job no longer uses `dependency-check/Dependency-Check_Action`,
+whose Dockerfile pulled `owasp/dependency-check-action:latest` and ran as root.
+It now runs the official OWASP image directly:
+
+- Image: `owasp/dependency-check:13.0.0@sha256:0e8f69ad5b00d62000937f4e57189812343f6903d9c83ee712012d51542a020a`
+  (multi-arch index; linux/amd64 manifest `sha256:a56d7e182706a22fdf1a5f70421fa415b9a096c9a4ba5a479cd4936e90dd8ba9`).
+- Image config read from the registry: `User=1000` (non-root), entrypoint
+  `/usr/share/dependency-check/bin/dependency-check.sh`. The job does not override the user.
+- The checkout is mounted read-only at `/src`; only `reports/` is writable.
+- Same scan options as before (`JSON`, `--enableExperimental`), with the
+  node_modules exclusion written as an Ant pattern (`**/node_modules/**`) so it
+  also matches nested folders.
+- `tests/security-workflow-contract.test.mjs` now fails if the image is not
+  digest-pinned, if any dependency-check `:latest` tag appears, if the old
+  action returns, or if the job runs the container as root.
+
+Still open: the image's bundled NVD data is downloaded at run time, so its
+freshness is checked by `scripts/verify-dependencycheck-report.mjs`, not
+guaranteed by the pin. Updating the image means changing tag and digest
+together after reviewing the new release.
