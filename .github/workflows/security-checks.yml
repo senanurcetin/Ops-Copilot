@@ -38,14 +38,15 @@ jobs:
           persist-credentials: false
 
       - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@1e54355a8b4c8abaa8cc7d0b70aa655a3bb15a6c # verified upstream commit; base image remains mutable
-        with:
-          project: "Ops-Copilot"
-          path: "."
-          format: "JSON"
-          args: >
-            --enableExperimental
-            --exclude node_modules
+        # Official OWASP image pinned by digest (tag 13.0.0); it runs as the
+        # image's non-root "dependencycheck" user. Replaces the Docker action
+        # whose Dockerfile pulled a moving :latest tag and ran as root (#118).
+        env:
+          DC_IMAGE: owasp/dependency-check:13.0.0@sha256:0e8f69ad5b00d62000937f4e57189812343f6903d9c83ee712012d51542a020a
+        run: |
+          mkdir -p reports
+          chmod 0777 reports
+          docker run --rm             --volume "$GITHUB_WORKSPACE:/src:ro"             --volume "$GITHUB_WORKSPACE/reports:/report"             "$DC_IMAGE"             --scan /src             --project "Ops-Copilot"             --format "JSON"             --out /report             --enableExperimental             --exclude "**/node_modules/**"
 
       - name: Verify OWASP report integrity and declared NVD freshness
         if: always()
