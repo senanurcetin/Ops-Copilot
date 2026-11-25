@@ -42,8 +42,9 @@ as reproducible. Running the image as root is also a review concern.
 A report can be stale even when the scan succeeds, particularly if its
 vulnerability database age is unknown.
 
-- [ ] Replace or sandbox the scanner with a reviewed digest-pinned image
-  or a reproducible, explicitly versioned equivalent.
+- [x] Replace or sandbox the scanner with a reviewed digest-pinned image
+  or a reproducible, explicitly versioned equivalent (26 November 2026, #118;
+  see below).
 - [ ] Prove vulnerability database version/freshness and report coverage.
 - [ ] Verify a manual or scheduled security workflow execution and an
   actual nonempty, parseable JSON artifact; normal PR build does not
@@ -91,3 +92,26 @@ production approval or prove exhaustive dependency coverage.
 Follow-up remains necessary: digest-pin or replace scanner runtime,
 verify actual execution/artifact metadata, review indicated CVEs and
 independently assess database freshness in an owner-approved test.
+
+
+## 26 November 2026 — pinned non-root scanner, bundled NVD data (#118)
+
+- **Scanner (executed):** `owasp/dependency-check:13.0.0@sha256:0e8f69ad5b00d62000937f4e57189812343f6903d9c83ee712012d51542a020a`.
+  Registry config: `User=1000` (non-root), entrypoint `dependency-check.sh`.
+  The job does not override the user; the checkout is mounted read-only.
+- **NVD data (not executed):** `owasp/dependency-check-action` is rebuilt
+  daily by upstream with the same 13.0.0 scanner and a fresh database. The job
+  only `docker create`s it, copies `/usr/share/dependency-check/data`, and runs
+  the pinned scanner with `--noupdate`. The resolved data-image digest is
+  printed in the job log.
+- Why not the NVD API: dependency-check 13 rejects the NVD API without a key
+  (first attempt, #142, reverted in #143), and the public JSON data feed URL
+  now returns 404.
+- Verified: manual run on the branch passed both the scan and
+  `scripts/verify-dependencycheck-report.mjs`.
+- `tests/security-workflow-contract.test.mjs` fails if the scanner is not
+  digest-pinned, if the data image is ever `docker run`, if `--noupdate` is
+  dropped, or if the container runs as root.
+
+Remaining: the database content still comes from a mutable upstream image; its
+freshness is enforced by the report validator, not by the pin.

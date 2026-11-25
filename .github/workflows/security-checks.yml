@@ -38,14 +38,27 @@ jobs:
           persist-credentials: false
 
       - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@1e54355a8b4c8abaa8cc7d0b70aa655a3bb15a6c # verified upstream commit; base image remains mutable
-        with:
-          project: "Ops-Copilot"
-          path: "."
-          format: "JSON"
-          args: >
-            --enableExperimental
-            --exclude node_modules
+        # Scanner: official OWASP image pinned by digest (13.0.0). It runs as
+        # the image's non-root user (uid 1000) with the checkout mounted
+        # read-only (#118).
+        # Data: the NVD database bundled in owasp/dependency-check-action,
+        # which upstream rebuilds daily with the same 13.0.0 scanner. That
+        # image is only `docker create`d so its data folder can be copied;
+        # none of its code runs. Its resolved digest is printed for the log.
+        env:
+          DC_IMAGE: owasp/dependency-check:13.0.0@sha256:0e8f69ad5b00d62000937f4e57189812343f6903d9c83ee712012d51542a020a
+          DC_DATA_IMAGE: owasp/dependency-check-action
+        run: |
+          docker pull --quiet "$DC_DATA_IMAGE"
+          echo "NVD data image: $(docker inspect --format '{{index .RepoDigests 0}}' "$DC_DATA_IMAGE")"
+          data_dir="$RUNNER_TEMP/dc-data"
+          cid=$(docker create "$DC_DATA_IMAGE")
+          docker cp "$cid:/usr/share/dependency-check/data" "$data_dir"
+          docker rm "$cid" >/dev/null
+          chmod -R a+rwX "$data_dir"
+          mkdir -p reports
+          chmod 0777 reports
+          docker run --rm             --volume "$GITHUB_WORKSPACE:/src:ro"             --volume "$GITHUB_WORKSPACE/reports:/report"             --volume "$data_dir:/usr/share/dependency-check/data"             "$DC_IMAGE"             --noupdate             --scan /src             --project "Ops-Copilot"             --format "JSON"             --out /report             --enableExperimental             --exclude "**/node_modules/**"
 
       - name: Verify OWASP report integrity and declared NVD freshness
         if: always()
